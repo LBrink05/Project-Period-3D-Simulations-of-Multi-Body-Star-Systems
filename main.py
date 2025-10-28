@@ -15,8 +15,8 @@ NUM_BODIES = 3
 MASS = np.array([1,1,1], dtype = float)
 GRAV = 1 #6.6743015×10−11 m³/kg*s² Gravitational constant
 
-TIMELINE = np.linspace(0,1000,100) #length of timeline
-TIMESTEP = 0.001 #timestep size (adjust for error)
+TIMELINE = np.linspace(0,1000,1000) #length of timeline
+TIMESTEP = 0.01 #timestep size (adjust for error)
 TIMESTEP_NUM = int(TIMELINE.size / TIMESTEP) #must be int
 FRAMERATIO = int(1 / TIMESTEP) #ratio of frames to timesteps
 

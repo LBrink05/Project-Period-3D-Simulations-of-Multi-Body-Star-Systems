@@ -20,66 +20,78 @@ MASS = np.ones(NUM_BODIES)
 #6.6743015×10−11 m³/kg*s² Gravitational constant
 GRAV = 1
 
-# Starting positions
+# Triangle Solution Lagrange
+
+m = 1  # mass of each body
+r = 10.0  # distance from center of mass to each body
+
+# 120-degree separation
 START_POS = np.array([
-    [5, 0, 0],
-    [-2.5, 4.33, 0],
-    [-2.5, -4.33, 0]
+    [ r, 0, 0],
+    [-0.5*r,  np.sqrt(3)/2*r, 0],
+    [-0.5*r, -np.sqrt(3)/2*r, 0]
 ], dtype=float)
 
-# Starting velocities
+R = r * np.sqrt(3)
+v_mag = np.sqrt(GRAV * m / R)
+
 START_VEL = np.array([
-    [0,0,0],
-    [0,0,0],
-    [0,0,0]
+    [0, v_mag, 0],
+    [-v_mag*np.sqrt(3)/2, -v_mag/2, 0],
+    [ v_mag*np.sqrt(3)/2, -v_mag/2, 0]
 ], dtype=float)
-
 
 # creating position data for each body (3)
-TIMELINE = np.linspace(0,10,100)
-TIMESTEP = 1 
+TIMELINE = np.linspace(0,10,1000)
+TIMESTEP = 0.1
+TIMESTEP_NUM = int(TIMELINE.size / TIMESTEP) #must be int
+FRAMERATIO = int(1 / TIMESTEP)
 
-def acceleration(prior_pos, time, body, MASS, NUM_BODIES):
+def acceleration(prior_pos, body, MASS, NUM_BODIES):
     current_acceleration = np.zeros(3)  
     for other_body in range(NUM_BODIES):
         if other_body != body: 
             r_vec = prior_pos[other_body] - prior_pos[body] # displacement vector
-            eps = 0.1
+            eps = 0.01
             r_norm = np.linalg.norm(r_vec)
             current_acceleration += MASS[other_body] * r_vec / (r_norm**2 + eps**2)**1.5
                 
     current_acceleration *= GRAV
     return current_acceleration
 
-def classical_leapfrog(pos, body, MASS, TIMESTEP, NUM_BODIES,time,START_POS,START_VEL, prior_pos, prior_vel):
-    #calculate acceleration for one body at one instance
-    current_acceleration  = acceleration(prior_pos, time, body, MASS, NUM_BODIES)
+def classical_leapfrog(pos, body, MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_pos, prior_vel):
+
     #calculate the velocity and position
     if time == 0:
+        #calculate acceleration for one body at one instance
+        acceleration_0  = acceleration(prior_pos, body, MASS, NUM_BODIES)
         #velocity initialization
-        vel_init = START_VEL[body, :] + (1/2) * current_acceleration * TIMESTEP
-        velocity = vel_init + TIMESTEP * current_acceleration
-        prior_vel[body, :] = velocity
+        prior_vel[body, :] = START_VEL[body, :] + (1/2) * acceleration_0 * TIMESTEP
 
         #update position based on velocity
-        body_pos = START_POS[body, :] + velocity * TIMESTEP
-        prior_pos[body, :] = body_pos
+        prior_pos[body, :] = START_POS[body, :] + prior_vel[body, :] * TIMESTEP
     else:
-        #velocity calculation
-        velocity = prior_vel[body, :] + TIMESTEP * current_acceleration
-        prior_vel[body, :] = velocity
+        #first acceleration based on old position
+        acceleration_first  = acceleration(prior_pos, body, MASS, NUM_BODIES)
+        #velocity first half-step
+        prior_vel[body, :] += TIMESTEP * 0.5 * acceleration_first
 
-        #position calculation
-        body_pos = prior_pos[body, :] + velocity * TIMESTEP
-        prior_pos[body, :] = body_pos
+        #position update based on velocity
+        prior_pos[body, :] += prior_vel[body, :] * TIMESTEP
+
+        #second acceleration based on new position
+        acceleration_second = acceleration(prior_pos, body, MASS, NUM_BODIES)
+
+        #velocity second half-step
+        prior_vel[body, :] += TIMESTEP * 0.5 * acceleration_second
 
     #returns position of 1 body at 1 moment and prior velocity
-    return body_pos, prior_vel, prior_pos
+    return prior_vel, prior_pos
     
-def position(TIMESTEP, TIMELINE, NUM_BODIES, START_POS, START_VEL):
+def position(TIMESTEP, TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL):
     #pos is vector pos[body][x,y,z]
 
-    pos = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
+    pos = np.empty((NUM_BODIES, TIMESTEP_NUM, 3), dtype=float)
 
     for body in range(0,NUM_BODIES):
         pos[body][0] = START_POS[body]
@@ -88,19 +100,21 @@ def position(TIMESTEP, TIMELINE, NUM_BODIES, START_POS, START_VEL):
     prior_pos = START_POS
 
     #for every timestep in the timeline
-    for time in range(0, TIMELINE.size):
-        #for every body at a moment
+    for time in range(0, TIMESTEP_NUM):
+        #for every body at a moment CHANGE TO BE ONE BIG MATRIX!!!! IT LOSES ENERGY SEQUENTIALLY
         for body in range(0,NUM_BODIES):
             #using leapfrog to calculate position for every moment in time
-                body_pos, prior_vel, prior_pos = classical_leapfrog(pos, body, MASS, TIMESTEP, NUM_BODIES,time,START_POS,START_VEL, prior_pos, prior_vel)
-                pos[body][time] = body_pos
+                prior_vel, prior_pos = classical_leapfrog(pos, body, MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_pos, prior_vel)
+                pos[body][time] = prior_pos[body, :]
     return pos
 
-pos = position(TIMESTEP, TIMELINE, NUM_BODIES, START_POS, START_VEL)
+pos = position(TIMESTEP,TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL)
+
+#slice calculated positions to remove timesteps between frames
+pos = pos[:, ::FRAMERATIO, : ]
 
 #plotting the data
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
 
 #animation of plot & points
 animated_plots = []
@@ -111,6 +125,7 @@ for body in range(len(pos)):
     animated_plots.append(ax.plot([],[],[])[0])
     points.append(ax.plot([],[],[], 'ro', markersize=4)[0])
     
+VIEWOFFSET = 5
 def update_data(frame):
 
     #go through every E.O.M frame by frame (motion has already been calculated)
@@ -132,9 +147,8 @@ def update_data(frame):
         min_z = max(pos[0, frame, 2], pos[1, frame, 2], pos[2, frame, 2] )
         max_z = min(pos[0, frame, 2], pos[1, frame, 2], pos[2, frame, 2] )
 
-        '''ax.set_xlim(max_x,min_x)
-        ax.set_ylim(max_y,min_y)
-        ax.set_zlim(max_z,min_z)'''
+        ax.set_xlim(r,-r)
+        ax.set_ylim(r,-r)
 
     return animated_plots, points
 
@@ -142,11 +156,11 @@ def update_data(frame):
 animation = FuncAnimation(
     fig=fig,
     func=update_data,
-    frames=len(TIMELINE),
-    interval=100,
+    frames=TIMELINE.size,
+    interval=5,
 )
 
 ax.set_xlabel('X axis')
 ax.set_ylabel('Y axis')
 ax.set_zlabel('Z axis')
-plt.show()
+plt.show() 

@@ -15,17 +15,17 @@ NUM_BODIES = 3
 MASS = np.array([1,1,1], dtype = float)
 GRAV = 1 #6.6743015×10−11 m³/kg*s² Gravitational constant
 
-TIMELINE = np.linspace(0,1000,1000) #length of timeline
-TIMESTEP = 0.1 #timestep size (adjust for error)
+TIMELINE = np.linspace(0,1000,100) #length of timeline
+TIMESTEP = 0.001 #timestep size (adjust for error)
 TIMESTEP_NUM = int(TIMELINE.size / TIMESTEP) #must be int
 FRAMERATIO = int(1 / TIMESTEP) #ratio of frames to timesteps
 
 
 #User Interface
-print("Please enter which 3 Body Configuration you want to simulate.")
+print("Please enter which 3 Body Configuration you want to simulate. Select from 0-2")
 configuration_name = input()
 
-if configuration_name == "lagrange-triangle-solution" or configuration_name == "triangle-solution" or configuration_name == "0":
+if configuration_name == "lagrange-triangle-solution" or configuration_name == "triangle-solution" or configuration_name == "0": #requires dt = 0.01
     # Triangle Solution Lagrange
     r = 10.0  # distance from center of mass to each body
     R = r * np.sqrt(3)
@@ -44,7 +44,7 @@ if configuration_name == "lagrange-triangle-solution" or configuration_name == "
         [ v_mag*np.sqrt(3)/2, -v_mag/2, 0]
     ], dtype=float)
 
-elif configuration_name == "8-solution" or configuration_name == "eight-solution" or configuration_name == "1":
+elif configuration_name == "8-solution" or configuration_name == "eight-solution" or configuration_name == "1": #requires dt = 0.01
     # 8 Figure
     D = 2.57429
     START_POS = np.array([
@@ -58,14 +58,27 @@ elif configuration_name == "8-solution" or configuration_name == "eight-solution
         [0.216343, 0.332029,0],
         [-0.432686, -0.664058,0]
     ], dtype=float)
+
+elif configuration_name == "yingyang" or configuration_name == "2": #requires dt = 0.0001
+    # butterfly Figure
+    START_POS = np.array([
+        [1,0, 0],
+        [-0.5,np.sqrt(3/2), 0],
+        [-0.5,-np.sqrt(3/2), 0]
+    ], dtype=float)
+
+    START_VEL = np.array([
+        [0.0,0.5, 0],
+        [-0.433,-0.25, 0],
+        [0.433,-0.25, 0]
+    ], dtype=float)
+
 else:
     print("Invalid configuration. Exiting program.")
     quit()
     
-
-
 #function to calculate acceleration at any configuration of bodies
-def acceleration(prior_pos, body, MASS, NUM_BODIES):
+def acceleration(prior_pos,  body, MASS, NUM_BODIES):
     current_acceleration = np.zeros(3)  
     for other_body in range(NUM_BODIES):
         if other_body != body: 
@@ -73,7 +86,7 @@ def acceleration(prior_pos, body, MASS, NUM_BODIES):
             eps = 0.01
             r_norm = np.linalg.norm(r_vec) 
             current_acceleration += MASS[other_body] * r_vec / (r_norm**2 + eps**2)**1.5
-                
+     
     current_acceleration *= GRAV
     return current_acceleration
 
@@ -149,7 +162,7 @@ def position(TIMESTEP, TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL):
 pos = position(TIMESTEP,TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL)
 
 #slice calculated positions to remove timesteps between frames for easy frame by frame position list
-pos = pos[:, ::FRAMERATIO, : ]
+frames = pos[:, ::FRAMERATIO, :]
 
 #plotting the data
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
@@ -159,21 +172,20 @@ animated_plots = []
 points = []
 
 # initialize plots / points on plots
-for body in range(len(pos)):
+for body in range(0,len(frames)):
     animated_plots.append(ax.plot([],[],[])[0])
     points.append(ax.plot([],[],[], 'ro', markersize=4)[0])
     
-VIEWOFFSET = 5
 def update_data(frame):
 
     #go through every E.O.M frame by frame (motion has already been calculated)
-    for body in range(len(pos)):
+    for body in range(len(frames)):
 
-        animated_plots[body].set_data(pos[body, :frame, 0], pos[body, :frame, 1])
-        animated_plots[body].set_3d_properties(pos[body, :frame, 2])
+        animated_plots[body].set_data(frames[body, :frame, 0], frames[body, :frame, 1])
+        animated_plots[body].set_3d_properties(frames[body, :frame, 2])
 
-        points[body].set_data([pos[body, frame, 0]],[pos[body, frame, 1]])
-        points[body].set_3d_properties([pos[body, frame, 2]])
+        points[body].set_data([frames[body, frame, 0]],[frames[body, frame, 1]])
+        points[body].set_3d_properties([frames[body, frame, 2]])
 
     return animated_plots, points
 

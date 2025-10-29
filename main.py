@@ -197,6 +197,11 @@ animation = FuncAnimation(
     interval=1,
 )
 
+axis_dim = 10
+ax.set_xlim(-axis_dim, axis_dim)
+ax.set_ylim(-axis_dim, axis_dim)
+ax.set_zlim(-axis_dim, axis_dim)
+
 ax.set_xlabel('X axis')
 ax.set_ylabel('Y axis')
 ax.set_zlabel('Z axis')

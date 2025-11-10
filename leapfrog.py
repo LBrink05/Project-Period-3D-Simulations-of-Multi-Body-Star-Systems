@@ -28,7 +28,7 @@ configuration_name = input()
 
 if configuration_name == "lagrange-triangle-solution" or configuration_name == "triangle-solution" or configuration_name == "0": #requires dt = 0.01
     # Triangle Solution Lagrange
-    r = 10.0  # distance from center of mass to each body
+    r = 5.0  # distance from center of mass to each body
     R = r * np.sqrt(3)
     v_mag = np.sqrt(GRAV * MASS[0] / R)
 

@@ -4,14 +4,14 @@ import numpy as np
 import csv
 import os, os.path
 
+#CONSTANTS
 NUM_BODIES = len(os.listdir('Simulated Data'))
-
 TIMELINE = np.linspace(0,1000,1000) #length of timeline
 TIMESTEP = 0.01 #timestep size (adjust for error) #use variable resolution
 TIMESTEP_NUM = int(TIMELINE.size / TIMESTEP) #must be int
 FRAMERATIO = int(1 / TIMESTEP) #ratio of frames to timesteps
 
-#slice calculated positions to remove timesteps between frames for easy frame by frame position list
+#read body positions for every frame from seperate csv files, one for each body
 frames = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
 for body in range(0,NUM_BODIES):
     path = 'Simulated Data/body'+ str(body) +'.csv'

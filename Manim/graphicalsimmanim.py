@@ -4,21 +4,39 @@ import os
 import latex
 
 
-#disable 3D shading on all Surface-derived objects
-_old_surface_init = Surface.__init__
- 
-def _flat_surface_init(self, *args, **kwargs):
-    kwargs["shade_in_3d"] = False   # force lighting off
-    return _old_surface_init(self, *args, **kwargs)
-
-Surface.__init__ = _flat_surface_init
-
+#export MGL_BACKEND=pyglet
+#export PYOPENGL_PLATFORM=x11
+#manim -pqh Manim/graphicalsimmanim.py MainScene
 
 #requires to play:
 #csc pos file, scene scale, x,y,z minmax
 
-class main_scene(ThreeDScene):
+class MainScene(ThreeDScene):
     def construct(self):
+            
+        #these are scene specific constants and have to be conveyed somehow
+        SCENE_SCALE = 2.5
+        x_min, x_max = -10, 10
+        y_min, y_max = -10, 10
+        z_min, z_max = -10, 10
+        #
+
+        # Scene setup
+        self.wait(0.1) 
+        self.camera.background_color = BLACK
+
+        self.renderer.camera.near = 0.01
+        self.renderer.camera.far  = 1000
+
+        # Start rotating the camera for a dynamic 3D effect
+        self.begin_ambient_camera_rotation(rate=0.2)
+        self.set_camera_orientation(phi=60 * DEGREES, theta=45 * DEGREES, zoom=(1/SCENE_SCALE))
+        self.renderer.camera.light_source.move_to(1000 * IN)
+
+        #grid setup
+        # Scale and rotate grid to align with XY plane in 3D space
+        grid = grid_func(x_min, x_max, y_min, y_max)
+        self.add(grid)
 
         # Load simulation data
         folder = "Simulated Data"
@@ -29,36 +47,18 @@ class main_scene(ThreeDScene):
             path = f"{folder}/body{body}.csv"
             frames[body] = np.genfromtxt(path, delimiter=',')
 
-        # Scene setup
-
-        self.camera.background_color = BLACK
-        self.renderer.camera.light_source.move_to(100*IN)
-
-        #these are scene specific constants and have to be conveyed somehow
-        SCENE_SCALE = 2.5
-        x_min, x_max = -10, 10
-        y_min, y_max = -10, 10
-        z_min, z_max = -10, 10
-        #
-
         #axes setup
         axes = ThreeDAxes(
             x_range=[x_min, x_max, 1],
             y_range=[y_min, y_max, 1],
             z_range=[z_min, z_max, 1],
-            x_length=(x_max - x_min),
-            y_length=(y_max - y_min),
-            z_length=(z_max - z_min)
+            x_length=(x_max - x_min -2),
+            y_length=(y_max - y_min -2),
+            z_length=(z_max - z_min -2)
         )
         #adds numbers
         axes.add_coordinates()
-
         self.add(axes)
-
-        # Start rotating the camera for a dynamic 3D effect
-        self.begin_ambient_camera_rotation(rate=0.2)
-        self.set_camera_orientation(phi=60 * DEGREES, theta=45 * DEGREES, zoom=(1/SCENE_SCALE))
-        self.renderer.camera.light_source.move_to(1000 * IN)
 
         #setting up objects in scene
         colors = [RED,GREEN,BLUE]
@@ -81,8 +81,6 @@ class main_scene(ThreeDScene):
             path = path_func(star, color=color, frames=frames[body])
             self.add(path)
 
-
-
         #animate their positions 
         def update_all(mob,alpha):
             frame_index = int(alpha * (len(TIMELINE) - 1))
@@ -94,7 +92,7 @@ class main_scene(ThreeDScene):
         # Stop camera rotation
         self.stop_ambient_camera_rotation()
 
-
+#function that draws star
 def star_func(radius, color):
     #core
     core = Circle(radius=radius, fill_color=color, fill_opacity=1, stroke_width=0)
@@ -105,6 +103,7 @@ def star_func(radius, color):
 
     return VGroup(core, halo, halo1, halo2)
 
+#function to draw path taken by stars
 def path_func(star, color, frames):
     #path = VMobject()
     #path.set_points_smoothly([*map(lambda p: np.array(p), frames)])
@@ -113,3 +112,31 @@ def path_func(star, color, frames):
     path = TracedPath(star.get_center, stroke_color=color, stroke_width=2)
 
     return path
+
+#function that creates grid
+def grid_func(x_min, x_max, y_min, y_max):
+    # XY grid plane
+    # Vertical grid lines
+    step = 0.5
+    thickness = 0.001
+    stroke_opacity = 0.05
+    grid = VGroup()
+    grid.z_index = -10
+     # vertical (constant x) lines
+    for x in np.arange(x_min, x_max + step, step):
+        start = np.array([x, y_min, surface_z(x, y_min)])
+        end   = np.array([x, y_max, surface_z(x, y_max)])
+        grid.add(Line3D(start=start, end=end, thickness=thickness, stroke_color=GREY, stroke_opacity=stroke_opacity))
+
+    # horizontal (constant y) lines
+    for y in np.arange(y_min, y_max + step, step):
+        start = np.array([x_min, y, surface_z(x_min, y)])
+        end   = np.array([x_max, y, surface_z(x_max, y)])
+        grid.add(Line3D(start=start, end=end, thickness=thickness, stroke_color=GREY, stroke_opacity=stroke_opacity))
+
+    return grid
+
+#Surface function for grid (used later for gravity visualization)
+def surface_z(x, y):
+    """Define the curvature of the grid (z = f(x, y))"""
+    return 0

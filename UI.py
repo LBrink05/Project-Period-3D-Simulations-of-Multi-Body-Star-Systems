@@ -35,6 +35,7 @@ class app(customtkinter.CTk):
                 self.mass3.configure(state="disabled")
                 self.velocity3.configure(state="disabled")
 
+        #logic for dropdown selection and value filling
         def stableOrbits(selection):
             num = int(selection.strip('Stable'))
             num = num-1
@@ -74,6 +75,7 @@ class app(customtkinter.CTk):
             self.velocity3.delete(0,"end")
             self.velocity3.insert(0, "("+str(stables[num][8][0])+","+str(stables[num][8][1])+","+str(stables[num][8][2])+")")
 
+            #keeps variables editable/disabled based on checkbox status
             if var1.get()==1:
                 return
             else:
@@ -87,6 +89,7 @@ class app(customtkinter.CTk):
                 self.mass3.configure(state="disabled")
                 self.velocity3.configure(state="disabled")
 
+        #submit button logic, checks if variables are valid and enters them in a list
         def update():
             pos = str(self.position1.get())
             if self.position1.get()[0]!="(" or self.position2.get()[0]!="(" or self.position3.get()[0]!="(" or self.position1.get()[-1]!=")" or self.position2.get()[-1]!=")" or self.position3.get()[-1]!=")" or self.velocity1.get()[0]!="(" or self.velocity2.get()[0]!="(" or self.velocity3.get()[0]!="(" or self.velocity1.get()[-1]!=")" or self.velocity2.get()[-1]!=")" or self.velocity3.get()[-1]!=")":
@@ -97,9 +100,7 @@ class app(customtkinter.CTk):
                 return(customData)
 
 
-
-
-
+        #stable orbit variable data, currently placeholders
         stable1 = list(((0,0,0),10,(0,0,0),(0,0,0),24,(0,0,0),(0,0,0),15,(0,0,0)))
         stable2 = list(((20,0,0),25,(10,0,0),(0,0,10),12,(0,0,20),(10,0,0),30,(20,0,0)))
         stable3 = list(((0,20,0),20,(0,10,0),(0,10,0),6,(0,20,0),(0,10,0),45,(0,20,0)))
@@ -127,12 +128,6 @@ class app(customtkinter.CTk):
         var1 = IntVar()
         self.button = customtkinter.CTkCheckBox(master = self.dropbox_frame, text="Custom", variable=var1, onvalue=1, offvalue=0, corner_radius=8, command=custom)
         self.button.pack(padx=20, pady=20, side="left")
-
-        #self.objects = customtkinter.CTkFrame(self)
-        #self.objects.grid(column=3, row=0, sticky="nsew", padx=20, pady=20)
-        #self.dropdown2 = customtkinter.CTkOptionMenu(self.objects, values=["Object 1", "Object 2", "Object 3"])
-        #self.dropdown2.pack(padx=20, pady=20, side="top")
-
 
         #tab view for the objects
         self.variables = customtkinter.CTkTabview(self, width=250)
@@ -189,44 +184,12 @@ class app(customtkinter.CTk):
         self.velocity3 = customtkinter.CTkEntry(self.variables.tab("Object 3"), state="disabled")
         self.velocity3.grid(column=1, row=2, padx=20, pady=20)
 
+        #Submit button and hidden textfield for error popups
         self.submitframe = customtkinter.CTkFrame(self)
         self.submitframe.grid(column=2, row=3, pady=(0,20), padx=20, sticky="nsew")
         self.submit = customtkinter.CTkButton(self.submitframe,text="Simulate", command=update)
         self.submit.pack(pady=20, padx=20,side="top")
         self.textfield = customtkinter.CTkLabel(self.submitframe, height=20, width=300, text="")
         self.textfield.pack(pady=20,side="top")
-
-        #self.variable_frame = customtkinter.CTkFrame(self)
-        #self.variable_frame.grid(column=2, row=1, columnspan=2, rowspan=2, padx=20, pady=20, sticky="nsew")
-        #self.variable_frame.grid_columnconfigure((0,1), weight=1)
-        #self.variable_frame.grid_rowconfigure((0,1), weight=1)
-        #self.objects = customtkinter.CTkSegmentedButton(self.variable_frame, values=["Object 1", "Object 2", "Object 3"])
-        #self.objects.pack(padx=20, pady=20, side="top")
-        #self.positionLabel = customtkinter.CTkLabel(master=self.variable_frame, text="Position (x,y,z):")
-        #self.positionLabel.pack(padx=20, pady=(30,5), side="top")
-        #self.position = customtkinter.CTkEntry(self.variable_frame, state="disabled")
-        #self.position.pack(padx=20, pady=5, side="top")
-        #self.massLabel = customtkinter.CTkLabel(master=self.variable_frame, text="Mass (solar mass):")
-        #self.massLabel.pack(padx=20, pady=(30,5), side="top")
-        #self.mass = customtkinter.CTkEntry(self.variable_frame, state="disabled")
-        #self.mass.pack(padx=20, pady=5, side="top")
-        #self.velocityLabel = customtkinter.CTkLabel(master=self.variable_frame, text="Velocity (km/s) (x,y,z):")
-        #self.velocityLabel.pack(padx=20, pady=(30,5), side="top")
-        #self.velocity = customtkinter.CTkEntry(self.variable_frame, state="disabled")
-        #self.velocity.pack(padx=20, pady=5, side="top")
-
-
-        #self.text = customtkinter.CTkLabel(self.variable_frame, text="Velocities (km/s)")
-        #self.text.pack(padx=20, pady=20, side="left")
-        #self.velocityx = customtkinter.CTkEntry(self.variable_frame, placeholder_text="Velocity (x)")
-        #self.velocityx.pack(padx=20, pady=20, side="left")
-        #self.velocityy = customtkinter.CTkEntry(self.variable_frame, placeholder_text="Velocity (y)")
-        #self.velocityy.pack(padx=20, pady=20, side="left")
-        #self.velocityz = customtkinter.CTkEntry(self.variable_frame, placeholder_text="Velocity (z)")
-        #self.velocityz.pack(padx=20, pady=20, side="left")
-
-
-
-
-
+        
 app().mainloop()

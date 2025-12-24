@@ -77,10 +77,9 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 ```bash
 # C++ Compiler (GCC 9.0+ or Clang 10.0+)
 # Python 3.8+
-# Required Python packages:
-pip install customtkinter matplotlib numpy scipy
-# or use included env with after Installation:
+python -m venv env
 source env/bin/activate
+pip install -r requirements.txt
 ```
 
 ### Installation

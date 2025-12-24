@@ -1,2 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/home/liam/Desktop/Development/3D-Simulations-of-Multi-Body-Star-Systems/media/videos/graphicalsimmanim/1080p15/partial_movie_files/main_scene/2777230407_2288474093_2250441533.mp4'

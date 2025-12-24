@@ -7,6 +7,7 @@ matplotlib.use("tkagg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.animation import FuncAnimation
+from pathlib import Path
 
 import leapfrog
 
@@ -28,7 +29,7 @@ class app(customtkinter.CTk):
             # read body positions for every frame from seperate csv files, one for each body
             frames = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
             for body in range(0, NUM_BODIES):
-                path = r'Simulated_Data\body' + str(body) + '.csv'
+                path = Path("Simulated_Data") / f"body{body}.csv"
                 frames[body] = np.genfromtxt(path, delimiter=',')
 
             # plotting the data

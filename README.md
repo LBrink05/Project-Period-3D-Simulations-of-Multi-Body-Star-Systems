@@ -116,42 +116,6 @@ Numerical methods are benchmarked across multiple dimensions:
 
 ---
 
-## 📖 Usage Examples
-
-### Running a Pythagorean Configuration
-
-```python
-from stellar_sim import Simulation, Configuration
-
-# Initialize Pythagorean three-body problem
-config = Configuration.pythagorean(masses=[3, 4, 5])
-sim = Simulation(config, method='adaptive_verlet')
-
-# Run simulation
-results = sim.run(t_max=100, collision_threshold=0.1)
-
-# Analyze stability
-lyapunov = sim.compute_lyapunov_spectrum()
-print(f"Max Lyapunov Exponent: {lyapunov.max():.4f}")
-print(f"Lyapunov Time: {1/lyapunov.max():.2f} time units")
-```
-
-### Comparing Methods
-
-```python
-methods = ['brutus', 'verlet', 'adaptive_rk', 'rk4']
-results = {}
-
-for method in methods:
-    sim = Simulation(config, method=method)
-    results[method] = sim.benchmark()
-
-# Plot comparison
-plot_method_comparison(results)
-```
-
----
-
 ## 🎨 Visualization Options
 
 Switch between rendering engines based on your needs:

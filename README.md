@@ -54,41 +54,7 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 | **Fixed-Step** | Standard RK4 | Non-symplectic classical method |
 
 ---
-
-## 📐 Mathematical Framework
-
-### Trajectory Error Metrics
-
-**Phase-Space Error** measures deviation from reference trajectories:
-
-$E_{\%}(t) = \frac{\lVert\vec{x}_{\text{reference}}(t) - \vec{x}_{\text{approximate}}(t)\rVert}{\lVert\vec{x}_{\text{reference}}(t)\rVert} \times 100$
-
-$\text{Where phase-space vector: } \vec{x}(t) = (q_1, q_2, q_3, \ldots, p_1, p_2, p_3, \ldots ) \text{for all bodies}$
-
-**Root-Mean-Square Error** aggregates trajectory accuracy:
-
-$E_{\%\text{RMS}} = \sqrt{\frac{1}{T} \sum_{t=0}^{T} E_{\%}(t)^2 \Delta t}$
-
-**Hamiltonian Conservation Error** quantifies energy drift:
-
-$E_{H\%} = \frac{\lvert H_0 - H(t)\rvert}{H(t)} \times 100$
-
-The simulation computes the full Lyapunov spectrum `${λ₁, λ₂, ..., λ₆ₙ}$ to characterize orbital stability:
-
-1. **Initialize** perturbation vectors as identity matrix in 6N-dimensional phase space
-2. **Evolve** perturbations alongside trajectories using the Jacobian matrix
-3. **Renormalize** via QR decomposition at regular intervals to prevent alignment
-4. **Accumulate** logarithmic growth rates across all renormalization steps
-
-**Maximum Lyapunov Exponent** (λₘₐₓ):
-- λₘₐₓ > 0: Chaotic, exponentially diverging trajectories
-- λₘₐₓ ≈ 0: Regular, quasi-periodic orbits
-- λₘₐₓ < 0: Stable, converging dynamics
-
-**Lyapunov Time**: `t_L = 1/λₘₐₓ` quantifies predictability horizon
-
----
-
+S
 ## 🛠️ Technology Stack
 
 ### Core Engine

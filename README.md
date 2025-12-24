@@ -54,7 +54,7 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 | **Fixed-Step** | Standard RK4 | Non-symplectic classical method |
 
 ---
-S
+
 ## 🛠️ Technology Stack
 
 ### Core Engine

@@ -61,24 +61,17 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 
 **Phase-Space Error** measures deviation from reference trajectories:
 
-```math
-E_%(t) = \frac{\|\vec{x}_{reference}(t) - \vec{x}_{approximate}(t)\|}{\|\vec{x}_{reference}(t)\|} × 100%
-```
+$$E_{\%}(t) = \frac{\|\vec{x}_{\text{reference}}(t) - \vec{x}_{\text{approximate}}(t)\|}{\|\vec{x}_{\text{reference}}(t)\|} \times 100\%$$
 
-Where phase-space vector: `x(t) = (q₁, q₂, q₃, ..., p₁, p₂, p₃, ...)` for all bodies
+Where phase-space vector: $\vec{x}(t) = (q_1, q_2, q_3, \ldots, p_1, p_2, p_3, \ldots)$ for all bodies
 
 **Root-Mean-Square Error** aggregates trajectory accuracy:
 
-```math
-E_%RMS = \sqrt{\frac{1}{T} \sum_{t=0}^{T} E_%(t)² Δt}
-```
+$$E_{\%\text{RMS}} = \sqrt{\frac{1}{T} \sum_{t=0}^{T} E_{\%}(t)^2 \Delta t}$$
 
 **Hamiltonian Conservation Error** quantifies energy drift:
 
-```math
-E_H% = \frac{|H₀ - H(t)|}{H(t)} × 100%
-```
-
+$$E_{H\%} = \frac{|H_0 - H(t)|}{H(t)} \times 100\%$$
 ### Lyapunov Stability Analysis
 
 The simulation computes the full Lyapunov spectrum `{λ₁, λ₂, ..., λ₆ₙ}` to characterize orbital stability:

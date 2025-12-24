@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
+from pathlib import Path
 
 import leapfrog
 
@@ -23,14 +24,14 @@ class app(customtkinter.CTk):
             NUM_BODIES = len(os.listdir("Simulated_Data"))
               # length of timeline
             #TIMESTEP = 0.001 to 0.1
-            with open(r'Simulated_Data\body0.csv', encoding="utf-8") as f:
+            with open(Path("Simulated_Data") / f"body0.csv", encoding="utf-8") as f:
                 row_count = sum(1 for _ in f)
 
             TIMELINE = np.linspace(0, row_count, row_count)
             # read body positions for every frame from seperate csv files, one for each body
             frames = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
             for body in range(0, NUM_BODIES):
-                path = r'Simulated_Data\body' + str(body) + '.csv'
+                path = Path("Simulated_Data") / f"body{body}.csv"
                 frames[body] = np.genfromtxt(path, delimiter=',')
 
             # plotting the data

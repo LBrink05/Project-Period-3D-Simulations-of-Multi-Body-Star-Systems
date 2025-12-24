@@ -63,7 +63,7 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 
 $$E_{\%}(t) = \frac{\lVert\vec{x}_{\text{reference}}(t) - \vec{x}_{\text{approximate}}(t)\rVert}{\lVert\vec{x}_{\text{reference}}(t)\rVert} \times 100$$
 
-Where phase-space vector: $\vec{x}(t) = (q_1, q_2, q_3, \ldots, p_1, p_2, p_3, \ldots ) \text{for all bodies}$
+$\text{Where phase-space vector: } \vec{x}(t) = (q_1, q_2, q_3, \ldots, p_1, p_2, p_3, \ldots ) \text{for all bodies}$
 
 **Root-Mean-Square Error** aggregates trajectory accuracy:
 

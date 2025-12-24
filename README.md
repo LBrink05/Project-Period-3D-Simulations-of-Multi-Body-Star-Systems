@@ -1,6 +1,6 @@
 # 🌟 3D Simulations of Multi-Body Star Systems
 
-A high-performance computational framework for simulating and analyzing gravitational dynamics in multi-body stellar systems using advanced numerical methods and Lyapunov stability analysis.
+A high-performance computational framework for simulating and analyzing gravitational dynamics in multi-body stellar systems using many advanced numerical methods and Lyapunov stability analysis.
 
 ---
 

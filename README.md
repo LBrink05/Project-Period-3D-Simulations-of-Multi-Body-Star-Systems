@@ -102,20 +102,6 @@ python main.py
 
 ---
 
-## 📊 Evaluation Criteria
-
-Numerical methods are benchmarked across multiple dimensions:
-
-| Criterion | Description |
-|-----------|-------------|
-| **Computation Time** | Time under fixed resource constraints |
-| **E_%RMS (Distance)** | Accuracy for close encounters vs. distant interactions |
-| **E_%RMS (Mass)** | Performance across different mass ratios |
-| **E_%RMS (Velocity)** | Precision for fast-moving vs. slow-moving bodies |
-| **E_H%** | Hamiltonian conservation (symplectic structure preservation) |
-
----
-
 ## 🎨 Visualization Options
 
 Switch between rendering engines based on your needs:

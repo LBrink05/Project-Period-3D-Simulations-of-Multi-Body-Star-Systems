@@ -61,7 +61,7 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 
 **Phase-Space Error** measures deviation from reference trajectories:
 
-$$E_{\%}(t) = \frac{\lVert\vec{x}_{\text{reference}}(t) - \vec{x}_{\text{approximate}}(t)\rVert}{\lVert\vec{x}_{\text{reference}}(t)\rVert} \times 100\\%$$
+$$E_{\%}(t) = \frac{\lVert\vec{x}_{\text{reference}}(t) - \vec{x}_{\text{approximate}}(t)\rVert}{\lVert\vec{x}_{\text{reference}}(t)\rVert} \times 100$$
 
 Where phase-space vector: $\vec{x}(t) = (q_1, q_2, q_3, \ldots, p_1, p_2, p_3, \ldots)$ for all bodies
 
@@ -71,7 +71,7 @@ $$E_{\%\text{RMS}} = \sqrt{\frac{1}{T} \sum_{t=0}^{T} E_{\%}(t)^2 \Delta t}$$
 
 **Hamiltonian Conservation Error** quantifies energy drift:
 
-$$E_{H\%} = \frac{\lvert H_0 - H(t)\rvert}{H(t)} \times 100\\%$$
+$$E_{H\%} = \frac{\lvert H_0 - H(t)\rvert}{H(t)} \times 100$$
 
 The simulation computes the full Lyapunov spectrum `{λ₁, λ₂, ..., λ₆ₙ}` to characterize orbital stability:
 

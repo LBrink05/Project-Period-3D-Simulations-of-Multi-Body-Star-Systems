@@ -6,8 +6,8 @@ import matplotlib
 matplotlib.use("tkagg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
-from pathlib import Path
 
 import leapfrog
 
@@ -18,18 +18,19 @@ class app(customtkinter.CTk):
     def __init__(self):
         customtkinter.CTk.__init__(self)
 
-        def show_animation():
+        def show_animation(duration):
             # CONSTANTS
             NUM_BODIES = len(os.listdir("Simulated_Data"))
-            TIMELINE = np.linspace(0, 1000, 1000)  # length of timeline
-            TIMESTEP = 0.01  # timestep size (adjust for error) #use variable resolution
-            TIMESTEP_NUM = int(TIMELINE.size / TIMESTEP)  # must be int
-            FRAMERATIO = int(1 / TIMESTEP)  # ratio of frames to timesteps
+              # length of timeline
+            #TIMESTEP = 0.001 to 0.1
+            with open(r'Simulated_Data\body0.csv', encoding="utf-8") as f:
+                row_count = sum(1 for _ in f)
 
+            TIMELINE = np.linspace(0, row_count, row_count)
             # read body positions for every frame from seperate csv files, one for each body
             frames = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
             for body in range(0, NUM_BODIES):
-                path = Path("Simulated_Data") / f"body{body}.csv"
+                path = r'Simulated_Data\body' + str(body) + '.csv'
                 frames[body] = np.genfromtxt(path, delimiter=',')
 
             # plotting the data
@@ -66,7 +67,7 @@ class app(customtkinter.CTk):
             canvas_widget = canvas.get_tk_widget()
             canvas_widget.pack(fill="both", expand=True)
 
-            axis_dim = 10
+            axis_dim = 25
             ax.set_xlim(-axis_dim, axis_dim)
             ax.set_ylim(-axis_dim, axis_dim)
             ax.set_zlim(-axis_dim, axis_dim)
@@ -160,29 +161,38 @@ class app(customtkinter.CTk):
         #submit button logic, checks if variables are valid and enters them in a list
         def update():
             num = int(self.dropdown1.get().strip('Stable'))-1
+            precision = 0.01
+            if var2.get() == 0:
+                precision = round(self.precision.get(), 4)
+            elif var2.get() == 1:
+                precision = float(self.precisionoverride.get())
             if var1.get() == 1:
                 if self.position1.get()[0]!="(" or self.position2.get()[0]!="(" or self.position3.get()[0]!="(" or self.position1.get()[-1]!=")" or self.position2.get()[-1]!=")" or self.position3.get()[-1]!=")" or self.velocity1.get()[0]!="(" or self.velocity2.get()[0]!="(" or self.velocity3.get()[0]!="(" or self.velocity1.get()[-1]!=")" or self.velocity2.get()[-1]!=")" or self.velocity3.get()[-1]!=")":
                     self.textfield.configure(text="Please include AND close brackets for position and velocity")
                     return
                 else:
                     customData = list((eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get())))
-                    leapfrog.Simulate(customData)
-                    show_animation()
+                    leapfrog.Simulate(customData, precision, int(self.durationVariable.get()))
+                    show_animation(int(self.durationVariable.get()))
             else:
-                leapfrog.Simulate(stables[num])
-                show_animation()
+                leapfrog.Simulate(stables[num], precision, int(self.durationVariable.get()))
+                show_animation(int(self.durationVariable.get()))
 
+        def override():
+            if var2.get() == 1:
+                self.precisionoverride.configure(state="normal")
+            else:
+                self.precisionoverride.configure(state="disabled")
 
-        #stable orbit variable data
+        #stable orbit variable data, currently placeholders
         rt32 = np.sqrt(3)/2
         v = np.sqrt(1/(5*np.sqrt(3)))
-        stable1 = list(((5, 0, 0),1,(0,v,0),
-                        (-0.5*5,rt32*5,0),1,(-v*rt32,-v/2,0),
-                        (-0.5*5,-rt32*5,0),1,(v*rt32,-v/2,0)))
+        stable1 = list(((5, 0, 0),1,(0,v,0),(-0.5*5,rt32*5,0),1,(-v*rt32,-v/2,0),(-0.5*5,-rt32*5,0),1,(v*rt32,-v/2,0)))
         stable2 = list(((2.57429,0,0),1,(0.216343, 0.332029,0),(-2.57429,0,0),1,(0.216343, 0.332029,0),(0,0,0),1,(-0.432686, -0.664058,0)))
-        stable3 = list(((1,0,0),1,(0,0.5, 0),(-0.5,10,0),1,(-0.433,-0.25, 0),(-0.5,10,0),1,(0.433,-0.25, 0)))
-        stable4 = list(((0,0,20),20,(0,0,10),(10,0,0),3,(20,0,0),(0,0,10),60,(0,0,20))) #currently placeholders
-        stables = list((stable1, stable2, stable3, stable4))
+        stable3 = list(((1,0,0),1,(0,0.5, 0),(-0.5,rt32,0),1,(-0.433,-0.25, 0),(-0.5,-rt32,0),1,(0.433,-0.25, 0)))
+        stable4 = list(((0,0,20),20,(0,0,10),(10,0,0),3,(20,0,0),(0,0,10),60,(0,0,20)))
+        stable5 = list(((1, 3, 0), 3, (0, 0, 0), (-2, -1, 0), 4, (0, 0, 0), (1, -1, 0), 5, (0, 0, 0)))
+        stables = list((stable1, stable2, stable3, stable4, stable5))
 
 
         #Window config
@@ -198,7 +208,7 @@ class app(customtkinter.CTk):
         #drop down for stable systems
         self.dropbox_frame=customtkinter.CTkFrame(self)
         self.dropbox_frame.grid(column=2, row=0, pady=20, padx=20, sticky="nsew")
-        self.dropdown1 = customtkinter.CTkOptionMenu(self.dropbox_frame, values=["Stable 1", "Stable 2", "Stable 3", "Stable 4"], command=stableOrbits)
+        self.dropdown1 = customtkinter.CTkOptionMenu(self.dropbox_frame, values=["Stable 1", "Stable 2", "Stable 3", "Stable 4", "Stable 5"], command=stableOrbits)
         self.dropdown1.pack(padx=(20,20), pady=20, side="left")
         #button to allow for custom inputs
         var1 = IntVar()
@@ -263,13 +273,27 @@ class app(customtkinter.CTk):
         #Submit button and hidden textfield for error popups
         self.submitframe = customtkinter.CTkFrame(self)
         self.submitframe.grid(column=2, row=3, pady=(0,20), padx=20, sticky="nsew")
+        self.slidertext = customtkinter.CTkLabel(self.submitframe, height=20, width=300, text="")
+        self.slidertext.pack(pady=(20,5),side="top")
+        self.precision = customtkinter.CTkSlider(self.submitframe, from_=0.1, to=0.0005, width=200, command=lambda value: self.slidertext.configure(text="Precision: " + str(round(value,4)) + " (size of timesteps, lower is more accurate)"), number_of_steps=100)
+        self.precision.pack(pady=(5,20), padx=20,side="top")
+        self.precision.set(0.01)
+        self.slidertext.configure(text="Precision: " + str(round(self.precision.get(),4)) + " (size of timesteps, lower is more accurate)")
+        self.durationVariable = customtkinter.CTkEntry(self.submitframe, width=200, placeholder_text="Simulation duration (Seconds)")
+        self.durationVariable.pack(pady=20, padx=20,side="top")
         self.submit = customtkinter.CTkButton(self.submitframe,text="Simulate", command=update)
         self.submit.pack(pady=20, padx=20,side="top")
         self.textfield = customtkinter.CTkLabel(self.submitframe, height=20, width=300, text="")
         self.textfield.pack(pady=20,side="top")
+        var2= IntVar()
+        self.override = customtkinter.CTkCheckBox(self.submitframe, text="Override precision value (this may kill your PC)", variable=var2, onvalue=1, offvalue=0, corner_radius=8, command=override)
+        self.override.pack(pady=20, padx=20,side="top")
+        self.precisionoverride = customtkinter.CTkEntry(self.submitframe, placeholder_text="Override Precision Value:", width=150)
+        self.precisionoverride.configure(state="disabled")
+        self.precisionoverride.pack(pady=20, padx=20,side="top")
 
         #frame for simulation animation
-        self.animation_frame = customtkinter.CTkFrame(self)
+        self.animation_frame = customtkinter.CTkFrame(self, height=500)
         self.animation_frame.grid(column=0, row=0, rowspan=2, columnspan=2, padx=20, pady=20, sticky="nsew")
 
 app().mainloop()

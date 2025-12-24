@@ -1,7 +1,6 @@
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 import numpy as np
-import csv
+from numba import njit
+
 
 #symplectic integrators (leapfrog, SABA) preserve energy/phase better for long-term dynamics, while high-order adaptive Runge-Kutta (DOP853) is good for short to medium term with accuracy control
 
@@ -15,101 +14,113 @@ import csv
 NUM_BODIES = 3
 GRAV = 1 #6.6743015×10E−11 m³/kg*s² Gravitational constant
 
-TIMELINE = np.linspace(0,1000,1000) #length of timeline
-MASS = np.array([1,1,1], dtype = float)
-TIMESTEP = 0.01 #timestep size (adjust for error) #use variable resolution
-TIMESTEP_NUM = int(TIMELINE.size / TIMESTEP) #must be int
-FRAMERATIO = int(1 / TIMESTEP) #ratio of frames to timesteps
+
 
 #function to be called in UI
-def Simulate(list):
-    MASS = np.array([list[1],list[4],list[7]], dtype = float)
-    START_POS = np.array([[list[0][0],list[0][1],list[0][2]],[list[3][0],list[3][1],list[3][2]],[list[6][0],list[6][1],list[6][2]]])
-    START_VEL = np.array([[list[2][0],list[2][1],list[2][2]],[list[5][0],list[5][1],list[5][2]],[list[8][0],list[8][1],list[8][2]]])
-    pos = position(TIMESTEP, TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL, MASS)
-    frames = pos[:, ::FRAMERATIO, :]
+def Simulate(data_list, precision, duration):
+    mass = np.array([data_list[1],data_list[4],data_list[7]], dtype=np.float64)
+    start_pos = np.array([[data_list[0][0],data_list[0][1],data_list[0][2]],[data_list[3][0],data_list[3][1],data_list[3][2]],[data_list[6][0],data_list[6][1],data_list[6][2]]], dtype=np.float64)
+    start_vel = np.array([[data_list[2][0],data_list[2][1],data_list[2][2]],[data_list[5][0],data_list[5][1],data_list[5][2]],[data_list[8][0],data_list[8][1],data_list[8][2]]], dtype=np.float64)
+
+    TIMELINE = np.linspace(0, duration*24, duration*24)  # length of timeline
+    timestep = precision
+    timestep_num = int(TIMELINE.size / timestep)  # must be int
+    frameratio = int(1 / timestep)  # ratio of frames to timesteps
+
+    pos = position(timestep, timestep_num, NUM_BODIES, start_pos, start_vel, mass)
+    frames = pos[:, ::frameratio, :]
 
     for body in range(0, NUM_BODIES):
         path = 'Simulated_Data/body' + str(body) + '.csv'
         np.savetxt(path, frames[body], delimiter=",")
-
+    
 #function to calculate acceleration at any configuration of bodies
+@njit
 def acceleration(prior_pos,  body, MASS, NUM_BODIES):
-    current_acceleration = np.zeros(3)  
-    for other_body in range(NUM_BODIES):
-        if other_body != body: 
-            r_vec = prior_pos[other_body] - prior_pos[body] # displacement vector
-            eps = 0.01
-            r_norm = np.linalg.norm(r_vec) 
-            current_acceleration += MASS[other_body] * r_vec / (r_norm**2 + eps**2)**1.5
-     
-    current_acceleration *= GRAV
-    return current_acceleration
+    ax = 0.0
+    ay = 0.0
+    az = 0.0
 
-def classical_leapfrog(pos, body, MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_pos, prior_vel):
+    px = prior_pos[body, 0]
+    py = prior_pos[body, 1]
+    pz = prior_pos[body, 2]
+
+    for other in range(NUM_BODIES):
+        if other != body:
+            rx = prior_pos[other, 0] - px
+            ry = prior_pos[other, 1] - py
+            rz = prior_pos[other, 2] - pz
+
+            r2 = rx * rx + ry * ry + rz * rz + 0.01 * 0.01
+            r = r2 ** 1.5
+
+            ax += MASS[other] * rx / r
+            ay += MASS[other] * ry / r
+            az += MASS[other] * rz / r
+
+    return np.array([ax, ay, az], dtype=np.float64)
+@njit
+def classical_leapfrog(MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_pos, prior_vel):
 #symplectic numerical method to approximate chaotic system
 
     #calculate the velocity and position
     if time == 0:
-        #calculate acceleration for one body at one instance
-        start_acceleration = np.zeros((NUM_BODIES, 3), dtype=float)
-        for body in range(0,NUM_BODIES):
-            start_acceleration[body, :]  = acceleration(prior_pos, body, MASS, NUM_BODIES)
-        for body in range(0,NUM_BODIES):
-            #velocity initialization
-            prior_vel[body, :] = START_VEL[body, :] + (1/2) * start_acceleration[body, :] * TIMESTEP
-            #update position based on velocity
-            prior_pos[body, :] = START_POS[body, :] + prior_vel[body, :] * TIMESTEP
+        # First step: half-step velocity
+        # acceleration at t0
+        acc0 = np.zeros((NUM_BODIES, 3), dtype=np.float64)
+
+        for b in range(NUM_BODIES):
+            acc0[b] = acceleration(prior_pos, b, MASS, NUM_BODIES)
+
+        # half-step velocity update
+        for b in range(NUM_BODIES):
+            prior_vel[b] = START_VEL[b] + 0.5 * acc0[b] * TIMESTEP
+            prior_pos[b] = START_POS[b] + prior_vel[b] * TIMESTEP
 
     else:
-        #calculate acceleration for one body at one instance
-        first_acceleration = np.zeros((NUM_BODIES, 3), dtype=float)
-        second_acceleration = np.zeros((NUM_BODIES, 3), dtype=float)
+        # Standard leapfrog step
+        acc1 = np.zeros((NUM_BODIES, 3), dtype=np.float64)
+        for b in range(NUM_BODIES):
+            acc1[b] = acceleration(prior_pos, b, MASS, NUM_BODIES)
 
-        #update acceleration
-        for body in range(0,NUM_BODIES):
-            first_acceleration[body, :]  = acceleration(prior_pos, body, MASS, NUM_BODIES)
+        # half-step velocity
+        for b in range(NUM_BODIES):
+            prior_vel[b] += 0.5 * TIMESTEP * acc1[b]
 
-        #update velocity
-        for body in range(0,NUM_BODIES):
-            #velocity first half-step
-            prior_vel[body, :] += TIMESTEP * 0.5 * first_acceleration[body, :]
+        # full-step position
+        for b in range(NUM_BODIES):
+            prior_pos[b] += prior_vel[b] * TIMESTEP
 
-        #update position
-        for body in range(0,NUM_BODIES):
-            #position update based on velocity
-            prior_pos[body, :] += prior_vel[body, :] * TIMESTEP
+        # second acceleration
+        acc2 = np.zeros((NUM_BODIES, 3), dtype=np.float64)
+        for b in range(NUM_BODIES):
+            acc2[b] = acceleration(prior_pos, b, MASS, NUM_BODIES)
 
-        #update acceletation
-        for body in range(0,NUM_BODIES):
-            #second acceleration based on new position
-            second_acceleration[body, :] = acceleration(prior_pos, body, MASS, NUM_BODIES)
-        
-        #update velocity
-        for body in range(0,NUM_BODIES):
-            #velocity second half-step
-            prior_vel[body, :] += TIMESTEP * 0.5 * second_acceleration[body, :]
+        # half-step velocity again
+        for b in range(NUM_BODIES):
+            prior_vel[b] += 0.5 * TIMESTEP * acc2[b]
 
-    #returns position of 1 body at 1 moment and prior velocity
     return prior_vel, prior_pos
     
-
+@njit
 def position(TIMESTEP, TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL, MASS):
     #function to calculate the position of bodies over time
     #pos is vector pos[body][x,y,z]
 
-    pos = np.empty((NUM_BODIES, TIMESTEP_NUM, 3), dtype=float)
+    pos = np.zeros((NUM_BODIES, TIMESTEP_NUM, 3), dtype=np.float64)
 
-    for body in range(0,NUM_BODIES):
-        pos[body][0] = START_POS[body]
+    # initialize arrays
+    prior_pos = START_POS.copy()
+    prior_vel = START_VEL.copy()
 
-    prior_vel = START_VEL
-    prior_pos = START_POS
+    # store initial pos
+    for b in range(NUM_BODIES):
+        pos[b, 0] = prior_pos[b]
 
-    #for every timestep in the timeline
-    for time in range(0, TIMESTEP_NUM):
-        #for every body at a moment CHANGE TO BE ONE BIG MATRIX!!!! IT LOSES ENERGY SEQUENTIALLY
-         #using leapfrog to calculate position for every moment in time
-        prior_vel, prior_pos = classical_leapfrog(pos, body, MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_pos, prior_vel)
-        pos[:,time] = prior_pos
+    # main loop
+    for t in range(TIMESTEP_NUM):
+        prior_vel, prior_pos = classical_leapfrog(MASS, TIMESTEP, NUM_BODIES, t, START_POS, START_VEL, prior_pos, prior_vel)
+        for b in range(NUM_BODIES):
+            pos[b, t] = prior_pos[b]
+
     return pos

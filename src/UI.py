@@ -10,28 +10,42 @@ from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 from pathlib import Path
 
+#leapfrog module
 import leapfrog
 
-customtkinter.set_appearance_mode("System")
+# Set Appearance of UI
+customtkinter.set_appearance_mode("System") 
 customtkinter.set_default_color_theme("dark-blue")
+
+#setting cwd directory
+CWDDIR = Path.cwd()
 
 class app(customtkinter.CTk):
     def __init__(self):
         customtkinter.CTk.__init__(self)
+        
+        def get_path(body):
+            #Debugging
+            if body == -1:
+                path = Path(str(CWDDIR)) / "src" / "Simulated_Data" #directory
+            else:
+                path = Path(str(CWDDIR)) / "src" / "Simulated_Data" / f"body{body}.csv" #individual csv
+            return path
 
         def show_animation(duration):
             # CONSTANTS
-            NUM_BODIES = len(os.listdir("Simulated_Data"))
-              # length of timeline
+            NUM_BODIES = len(os.listdir(get_path(-1)))
+            # length of timeline
             #TIMESTEP = 0.001 to 0.1
-            with open(Path("Simulated_Data") / f"body0.csv", encoding="utf-8") as f:
+
+            with open(get_path(0), encoding="utf-8") as f:
                 row_count = sum(1 for _ in f)
 
             TIMELINE = np.linspace(0, row_count, row_count)
             # read body positions for every frame from seperate csv files, one for each body
             frames = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
             for body in range(0, NUM_BODIES):
-                path = Path("Simulated_Data") / f"body{body}.csv"
+                path = get_path(body)
                 frames[body] = np.genfromtxt(path, delimiter=',')
 
             # plotting the data
@@ -297,4 +311,12 @@ class app(customtkinter.CTk):
         self.animation_frame = customtkinter.CTkFrame(self, height=500)
         self.animation_frame.grid(column=0, row=0, rowspan=2, columnspan=2, padx=20, pady=20, sticky="nsew")
 
-app().mainloop()
+def main():
+    app().mainloop()
+
+if __name__ == "__main__":
+    main()
+    
+# TO DO:
+# Add Tests for UI via Pytest
+    

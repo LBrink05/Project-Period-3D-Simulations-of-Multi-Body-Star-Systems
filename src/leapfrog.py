@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit
-
+from pathlib import Path
 
 #symplectic integrators (leapfrog, SABA) preserve energy/phase better for long-term dynamics, while high-order adaptive Runge-Kutta (DOP853) is good for short to medium term with accuracy control
 
@@ -14,7 +14,8 @@ from numba import njit
 NUM_BODIES = 3
 GRAV = 1 #6.6743015×10E−11 m³/kg*s² Gravitational constant
 
-
+#setting cwd directory
+CWDDIR = Path.cwd()
 
 #function to be called in UI
 def Simulate(data_list, precision, duration):
@@ -31,7 +32,7 @@ def Simulate(data_list, precision, duration):
     frames = pos[:, ::frameratio, :]
 
     for body in range(0, NUM_BODIES):
-        path = 'Simulated_Data/body' + str(body) + '.csv'
+        path =  Path(str(CWDDIR)) / "src" / 'Simulated_Data' / f"body{body}.csv"
         np.savetxt(path, frames[body], delimiter=",")
     
 #function to calculate acceleration at any configuration of bodies

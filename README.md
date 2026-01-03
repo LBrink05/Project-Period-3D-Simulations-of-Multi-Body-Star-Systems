@@ -72,7 +72,14 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Installation
+
+```bash
+git clone https://github.com/UM-MSP/3D-Simulations-of-Multi-Body-Star-Systems
+cd 3D-Simulations-of-Multi-Body-Star-Systems
+```
+
+### Setup
 
 ```bash
 # C++ Compiler (GCC 9.0+ or Clang 10.0+)
@@ -82,13 +89,6 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
-### Installation
-
-```bash
-git clone https://github.com/UM-MSP/3D-Simulations-of-Multi-Body-Star-Systems
-cd 3D-Simulations-of-Multi-Body-Star-Systems
-```
-
 ### Quick Start
 
 ```bash
@@ -96,7 +96,7 @@ cd 3D-Simulations-of-Multi-Body-Star-Systems
 make build
 
 # Launch GUI
-python main.py
+python src/UI.py
 ```
 
 ---

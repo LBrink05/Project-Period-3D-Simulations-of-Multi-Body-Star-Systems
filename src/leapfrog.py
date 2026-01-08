@@ -12,7 +12,6 @@ from pathlib import Path
 
 # CONSTANTS
 NUM_BODIES = 3
-GRAV = 1 #6.6743015×10E−11 m³/kg*s² Gravitational constant
 
 #setting cwd directory
 CWDDIR = Path.cwd()
@@ -60,6 +59,7 @@ def acceleration(prior_pos,  body, MASS, NUM_BODIES):
             az += MASS[other] * rz / r
 
     return np.array([ax, ay, az], dtype=np.float64)
+    
 @njit
 def classical_leapfrog(MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_pos, prior_vel):
 #symplectic numerical method to approximate chaotic system

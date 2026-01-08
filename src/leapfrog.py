@@ -32,7 +32,7 @@ def Simulate(data_list, precision, duration):
     frames = pos[:, ::frameratio, :]
 
     for body in range(0, NUM_BODIES):
-        path =  Path(str(CWDDIR)) / "src" / 'Simulated_Data' / f"body{body}.csv"
+        path =  Path(str(CWDDIR)) / 'Simulated_Data' / f"body{body}.csv"
         np.savetxt(path, frames[body], delimiter=",")
     
 #function to calculate acceleration at any configuration of bodies

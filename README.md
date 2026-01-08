@@ -13,8 +13,7 @@ This project provides a comprehensive toolkit for investigating stellar dynamics
 - 🚀 **Numerical Methods**: Compare symplectic, adaptive, arbitrary-precision, and series-based integrators
 - 📊 **Lyapunov Stability Analysis**: Full spectrum computation for orbital predictability assessment
 - 🎨 **Multi-Platform Visualization**: Switch between Matplotlib, Unity, and Manim renderers
-- ⚡ **C++ Core**: C++ engine optimized for computational efficiency
-- 🖥️ **Python Interface**: Python-based GUI built with CustomTkinter
+- 🖥️ **GUI Interface**: Python-based GUI built with CustomTkinter
 - 📈 **Comprehensive Error Metrics**: Phase-space trajectory accuracy and Hamiltonian conservation tracking
 
 ---
@@ -50,15 +49,15 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 | **Arbitrary-Precision** | BRUTUS | Minimized round-off error for reference trajectories |
 | **Symplectic** | Leapfrog/Verlet | Preserves Hamiltonian structure and phase-space volume |
 | **Adaptive** | Adaptive RK/Verlet | Dynamic timestep adjustment based on error estimates |
-| **Semi-Analytical** | Adomian Decomposition | Series-based solution approximations |
 | **Fixed-Step** | Standard RK4 | Non-symplectic classical method |
+| **Forward Euler** |
 
 ---
 
 ## 🛠️ Technology Stack
 
 ### Core Engine
-- **C++**: High-performance numerical integration and physics calculations
+- **Python**: High-performance numerical integration and physics calculations
 - Optimized for computational efficiency in long-term simulations
 
 ### User Interface & Visualization
@@ -76,13 +75,13 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 
 ```bash
 git clone https://github.com/UM-MSP/3D-Simulations-of-Multi-Body-Star-Systems
-cd 3D-Simulations-of-Multi-Body-Star-Systems
+cd 3D-Simulations-of-Multi-Body-Star-Systems/src
 ```
 
 ### Setup
 
 ```bash
-# C++ Compiler (GCC 9.0+ or Clang 10.0+)
+
 # Python 3.8+
 python -m venv env
 source env/bin/activate
@@ -94,7 +93,6 @@ pip install -r requirements.txt
 ```bash
 
 # Launch GUI
-cd src
 python UI.py
 ```
 

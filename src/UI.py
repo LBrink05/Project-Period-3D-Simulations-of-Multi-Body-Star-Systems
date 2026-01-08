@@ -27,9 +27,9 @@ class app(customtkinter.CTk):
         def get_path(body):
             #Debugging
             if body == -1:
-                path = Path(str(CWDDIR)) / "src" / "Simulated_Data" #directory
+                path = Path(str(CWDDIR)) / "Simulated_Data" #directory
             else:
-                path = Path(str(CWDDIR)) / "src" / "Simulated_Data" / f"body{body}.csv" #individual csv
+                path = Path(str(CWDDIR)) / "Simulated_Data" / f"body{body}.csv" #individual csv
             return path
 
         def show_animation(duration):
@@ -320,3 +320,4 @@ if __name__ == "__main__":
 # TO DO:
 # Add Tests for UI via Pytest
     
+

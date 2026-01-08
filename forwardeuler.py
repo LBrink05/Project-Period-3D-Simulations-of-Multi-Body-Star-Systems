@@ -64,7 +64,7 @@ def forward_euler(MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_p
 
     # position, velocity update
     for b in range(NUM_BODIES):
-        prior_vel[b] = START_VEL[b] + 0.5 * acc0[b] * TIMESTEP
+        prior_vel[b] = START_VEL[b] + acc0[b] * TIMESTEP
         prior_pos[b] = START_POS[b] + prior_vel[b] * TIMESTEP
 
     return prior_vel, prior_pos

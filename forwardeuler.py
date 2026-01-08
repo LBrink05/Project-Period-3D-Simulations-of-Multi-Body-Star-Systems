@@ -54,11 +54,11 @@ def acceleration(prior_pos,  body, MASS, NUM_BODIES):
 def forward_euler(MASS, TIMESTEP, NUM_BODIES, time ,START_POS,START_VEL, prior_pos, prior_vel):
 # simple numerical method to approximate chaotic system
 
-    # calculate the velocity and position
     if time == 0:
         # acceleration at t0
         acc0 = np.zeros((NUM_BODIES, 3), dtype=np.float64)
 
+    # calculate acceleration at t
     for b in range(NUM_BODIES):
         acc0[b] = acceleration(prior_pos, b, MASS, NUM_BODIES)
 

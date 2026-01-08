@@ -92,11 +92,10 @@ pip install -r requirements.txt
 ### Quick Start
 
 ```bash
-# Compile C++ engine
-make build
 
 # Launch GUI
-python src/UI.py
+cd src
+python UI.py
 ```
 
 ---

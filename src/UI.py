@@ -1,4 +1,5 @@
 import os
+from ast import literal_eval
 from tkinter import IntVar, ttk
 import customtkinter
 import numpy as np
@@ -10,34 +11,33 @@ from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 from pathlib import Path
 
-#leapfrog module
 import leapfrog
 
-# Set Appearance of UI
-customtkinter.set_appearance_mode("System") 
+customtkinter.set_appearance_mode("System")
 customtkinter.set_default_color_theme("dark-blue")
+
 
 #setting cwd directory
 CWDDIR = Path.cwd()
 
+
 class app(customtkinter.CTk):
     def __init__(self):
         customtkinter.CTk.__init__(self)
-        
+
         def get_path(body):
-            #Debugging
+            # Debugging
             if body == -1:
-                path = Path(str(CWDDIR)) / "Simulated_Data" #directory
+                path = Path(str(CWDDIR)) / "Simulated_Data"  # directory
             else:
-                path = Path(str(CWDDIR)) / "Simulated_Data" / f"body{body}.csv" #individual csv
+                path = Path(str(CWDDIR)) / "Simulated_Data" / f"body{body}.csv"  # individual csv
             return path
 
         def show_animation(duration):
             # CONSTANTS
             NUM_BODIES = len(os.listdir(get_path(-1)))
-            # length of timeline
+              # length of timeline
             #TIMESTEP = 0.001 to 0.1
-
             with open(get_path(0), encoding="utf-8") as f:
                 row_count = sum(1 for _ in f)
 
@@ -122,44 +122,82 @@ class app(customtkinter.CTk):
 
         #logic for dropdown selection and value filling
         def stableOrbits(selection):
-            num = int(selection.strip('Stable'))-1
-            self.position1.configure(state="normal")
-            self.position1.delete(0,"end")
-            self.position1.insert(0, "("+str(round(stables[num][0][0],3))+","+str(round(stables[num][0][1],3))+","+str(round(stables[num][0][2],3))+")")
+            if selection.startswith('C'):
+                num = int(selection.strip('Custom')) - 1
+                self.position1.configure(state="normal")
+                self.position1.delete(0, "end")
+                self.position1.insert(0, "(" + str(round(customs[num][0][0], 3)) + "," + str(round(customs[num][0][1], 3)) + "," + str(round(customs[num][0][2], 3)) + ")")
 
-            self.mass1.configure(state="normal")
-            self.mass1.delete(0,"end")
-            self.mass1.insert(0, stables[num][1])
+                self.mass1.configure(state="normal")
+                self.mass1.delete(0, "end")
+                self.mass1.insert(0, customs[num][1])
 
-            self.velocity1.configure(state="normal")
-            self.velocity1.delete(0,"end")
-            self.velocity1.insert(0, "("+str(round(stables[num][2][0],3))+","+str(round(stables[num][2][1],3))+","+str(round(stables[num][2][2],3))+")")
+                self.velocity1.configure(state="normal")
+                self.velocity1.delete(0, "end")
+                self.velocity1.insert(0, "(" + str(round(customs[num][2][0], 3)) + "," + str(round(customs[num][2][1], 3)) + "," + str(round(customs[num][2][2], 3)) + ")")
 
-            self.position2.configure(state="normal")
-            self.position2.delete(0,"end")
-            self.position2.insert(0, "("+str(round(stables[num][3][0],3))+","+str(round(stables[num][3][1],3))+","+str(round(stables[num][3][2],3))+")")
+                self.position2.configure(state="normal")
+                self.position2.delete(0, "end")
+                self.position2.insert(0, "(" + str(round(customs[num][3][0], 3)) + "," + str(round(customs[num][3][1], 3)) + "," + str(round(customs[num][3][2], 3)) + ")")
 
-            self.mass2.configure(state="normal")
-            self.mass2.delete(0,"end")
-            self.mass2.insert(0, stables[num][4])
+                self.mass2.configure(state="normal")
+                self.mass2.delete(0, "end")
+                self.mass2.insert(0, customs[num][4])
 
-            self.velocity2.configure(state="normal")
-            self.velocity2.delete(0,"end")
-            self.velocity2.insert(0, "("+str(round(stables[num][5][0],3))+","+str(round(stables[num][5][1],3))+","+str(round(stables[num][5][2],3))+")")
+                self.velocity2.configure(state="normal")
+                self.velocity2.delete(0, "end")
+                self.velocity2.insert(0, "(" + str(round(customs[num][5][0], 3)) + "," + str(round(customs[num][5][1], 3)) + "," + str(round(customs[num][5][2], 3)) + ")")
 
-            self.position3.configure(state="normal")
-            self.position3.delete(0,"end")
-            self.position3.insert(0, "("+str(round(stables[num][6][0],3))+","+str(round(stables[num][6][1],3))+","+str(round(stables[num][6][2],3))+")")
+                self.position3.configure(state="normal")
+                self.position3.delete(0, "end")
+                self.position3.insert(0, "(" + str(round(customs[num][6][0], 3)) + "," + str(round(customs[num][6][1], 3)) + "," + str(round(customs[num][6][2], 3)) + ")")
 
-            self.mass3.configure(state="normal")
-            self.mass3.delete(0,"end")
-            self.mass3.insert(0, stables[num][7])
+                self.mass3.configure(state="normal")
+                self.mass3.delete(0, "end")
+                self.mass3.insert(0, customs[num][7])
 
-            self.velocity3.configure(state="normal")
-            self.velocity3.delete(0,"end")
-            self.velocity3.insert(0, "("+str(round(stables[num][8][0],3))+","+str(round(stables[num][8][1],3))+","+str(round(stables[num][8][2],3))+")")
+                self.velocity3.configure(state="normal")
+                self.velocity3.delete(0, "end")
+                self.velocity3.insert(0, "(" + str(round(customs[num][8][0], 3)) + "," + str(round(customs[num][8][1], 3)) + "," + str(round(customs[num][8][2], 3)) + ")")
+            else:
+                num = int(selection.strip('Stable'))-1
+                self.position1.configure(state="normal")
+                self.position1.delete(0,"end")
+                self.position1.insert(0, "("+str(round(stables[num][0][0],3))+","+str(round(stables[num][0][1],3))+","+str(round(stables[num][0][2],3))+")")
 
-            #keeps variables editable/disabled based on checkbox status
+                self.mass1.configure(state="normal")
+                self.mass1.delete(0,"end")
+                self.mass1.insert(0, stables[num][1])
+
+                self.velocity1.configure(state="normal")
+                self.velocity1.delete(0,"end")
+                self.velocity1.insert(0, "("+str(round(stables[num][2][0],3))+","+str(round(stables[num][2][1],3))+","+str(round(stables[num][2][2],3))+")")
+
+                self.position2.configure(state="normal")
+                self.position2.delete(0,"end")
+                self.position2.insert(0, "("+str(round(stables[num][3][0],3))+","+str(round(stables[num][3][1],3))+","+str(round(stables[num][3][2],3))+")")
+
+                self.mass2.configure(state="normal")
+                self.mass2.delete(0,"end")
+                self.mass2.insert(0, stables[num][4])
+
+                self.velocity2.configure(state="normal")
+                self.velocity2.delete(0,"end")
+                self.velocity2.insert(0, "("+str(round(stables[num][5][0],3))+","+str(round(stables[num][5][1],3))+","+str(round(stables[num][5][2],3))+")")
+
+                self.position3.configure(state="normal")
+                self.position3.delete(0,"end")
+                self.position3.insert(0, "("+str(round(stables[num][6][0],3))+","+str(round(stables[num][6][1],3))+","+str(round(stables[num][6][2],3))+")")
+
+                self.mass3.configure(state="normal")
+                self.mass3.delete(0,"end")
+                self.mass3.insert(0, stables[num][7])
+
+                self.velocity3.configure(state="normal")
+                self.velocity3.delete(0,"end")
+                self.velocity3.insert(0, "("+str(round(stables[num][8][0],3))+","+str(round(stables[num][8][1],3))+","+str(round(stables[num][8][2],3))+")")
+
+                #keeps variables editable/disabled based on checkbox status
             if var1.get()==1:
                 return
             else:
@@ -199,16 +237,79 @@ class app(customtkinter.CTk):
             else:
                 self.precisionoverride.configure(state="disabled")
 
+        def save():
+            if var1.get()==1:
+                presets = open("Configurations/Presets.csv", "w")
+                new = list((eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get())))
+                customs.append(new)
+                for i in customs:
+                    presets.write(str(i) + "\n")
+                presets.close()
+
+                full.clear()
+                for i, stable in enumerate(stables):
+                    full.append('Stable ' + str(i + 1))
+                for x, customized in enumerate(customs):
+                    full.append('Custom ' + str(x + 1))
+                self.dropdown1.configure(values=full)
+                self.dropdown1.set(full[-1])
+            else:
+                return
+
+
+
         #stable orbit variable data, currently placeholders
         rt32 = np.sqrt(3)/2
         v = np.sqrt(1/(5*np.sqrt(3)))
+        omega = np.sqrt(np.sqrt(3) / 3)
         stable1 = list(((5, 0, 0),1,(0,v,0),(-0.5*5,rt32*5,0),1,(-v*rt32,-v/2,0),(-0.5*5,-rt32*5,0),1,(v*rt32,-v/2,0)))
         stable2 = list(((2.57429,0,0),1,(0.216343, 0.332029,0),(-2.57429,0,0),1,(0.216343, 0.332029,0),(0,0,0),1,(-0.432686, -0.664058,0)))
         stable3 = list(((1,0,0),1,(0,0.5, 0),(-0.5,rt32,0),1,(-0.433,-0.25, 0),(-0.5,-rt32,0),1,(0.433,-0.25, 0)))
-        stable4 = list(((0,0,20),20,(0,0,10),(10,0,0),3,(20,0,0),(0,0,10),60,(0,0,20)))
-        stable5 = list(((1, 3, 0), 3, (0, 0, 0), (-2, -1, 0), 4, (0, 0, 0), (1, -1, 0), 5, (0, 0, 0)))
-        stables = list((stable1, stable2, stable3, stable4, stable5))
+        stable4 = list((( 1.0, 0.0, 0), 1, ( 0.0,  omega, 0),(-0.5,  rt32, 0), 1, (-omega*rt32, -omega/2, 0),(-0.5, -rt32, 0), 1, ( omega*rt32, -omega/2, 0)))
+        stable5 = list((
+    (-13.02117, 0, 0), 1, ( 0.085236,  0.03498, 0),
+    ( 13.02117, 0, 0), 1, ( 0.085236,  0.03498, 0),
+    ( 0,        0, 0), 1, (-0.170472, -0.06996, 0)
+)) #butterfly I
+        stable6 = list((
+    (-12.04917, 0, 0), 1, ( 0.113643,  0.028219, 0),
+    ( 12.04917, 0, 0), 1, ( 0.113643,  0.028219, 0),
+    ( 0,        0, 0), 1, (-0.227286, -0.056438, 0)
+))  #butteryfly II
+        stable7 = list((
+    (-8.29368, 0, 0), 1, ( 0.161277,  0.137507, 0),
+    ( 8.29368, 0, 0), 1, ( 0.161277,  0.137507, 0),
+    ( 0,       0, 0), 1, (-0.322554, -0.275014, 0)
+)) #moth I
+        stable8 = list((
+    (-7.83516, 0, 0), 1, ( 0.156829,  0.16207, 0),
+    ( 7.83516, 0, 0), 1, ( 0.156829,  0.16207, 0),
+    ( 0,       0, 0), 1, (-0.313658, -0.32414, 0)
+)) #moth II
+        stable9 = list((
+    (-7.17921, 0, 0), 1, ( 0.208677,  0.130401, 0),
+    ( 7.17921, 0, 0), 1, ( 0.208677,  0.130401, 0),
+    ( 0,       0, 0), 1, (-0.417354, -0.260802, 0)
+)) #Yarn
+        stable10 = list((
+    (-8.57406, 0, 0), 1, ( 0.175521,  0.104039, 0),
+    ( 8.57406, 0, 0), 1, ( 0.175521,  0.104039, 0),
+    ( 0,       0, 0), 1, (-0.351042, -0.208078, 0)
+)) #yinyang
+        stables = list((stable1, stable2, stable3, stable4, stable5, stable6, stable7, stable8, stable9, stable10))
+        customs = list()
+        full = list()
 
+        with open("Configurations/Presets.csv", "r") as presets:
+            for x in presets:
+                line = x.strip()
+                if line:
+                    customs.append(literal_eval(line))
+
+        for i, stable in enumerate(stables):
+            full.append('Stable ' + str(i+1))
+        for x, customized in enumerate(customs):
+            full.append('Custom ' + str(x+1))
 
         #Window config
         self.title("Three Body Problem Simulator")
@@ -223,7 +324,7 @@ class app(customtkinter.CTk):
         #drop down for stable systems
         self.dropbox_frame=customtkinter.CTkFrame(self)
         self.dropbox_frame.grid(column=2, row=0, pady=20, padx=20, sticky="nsew")
-        self.dropdown1 = customtkinter.CTkOptionMenu(self.dropbox_frame, values=["Stable 1", "Stable 2", "Stable 3", "Stable 4", "Stable 5"], command=stableOrbits)
+        self.dropdown1 = customtkinter.CTkOptionMenu(self.dropbox_frame, values=full, command=stableOrbits)
         self.dropdown1.pack(padx=(20,20), pady=20, side="left")
         #button to allow for custom inputs
         var1 = IntVar()
@@ -288,6 +389,8 @@ class app(customtkinter.CTk):
         #Submit button and hidden textfield for error popups
         self.submitframe = customtkinter.CTkFrame(self)
         self.submitframe.grid(column=2, row=3, pady=(0,20), padx=20, sticky="nsew")
+        self.save = customtkinter.CTkButton(self.submitframe, height=20, width=150, text="Save Configuration", command=save)
+        self.save.pack(pady=(5,5), side="top")
         self.slidertext = customtkinter.CTkLabel(self.submitframe, height=20, width=300, text="")
         self.slidertext.pack(pady=(20,5),side="top")
         self.precision = customtkinter.CTkSlider(self.submitframe, from_=0.1, to=0.0005, width=200, command=lambda value: self.slidertext.configure(text="Precision: " + str(round(value,4)) + " (size of timesteps, lower is more accurate)"), number_of_steps=100)
@@ -295,11 +398,11 @@ class app(customtkinter.CTk):
         self.precision.set(0.01)
         self.slidertext.configure(text="Precision: " + str(round(self.precision.get(),4)) + " (size of timesteps, lower is more accurate)")
         self.durationVariable = customtkinter.CTkEntry(self.submitframe, width=200, placeholder_text="Simulation duration (Seconds)")
-        self.durationVariable.pack(pady=20, padx=20,side="top")
+        self.durationVariable.pack(pady=10, padx=20,side="top")
         self.submit = customtkinter.CTkButton(self.submitframe,text="Simulate", command=update)
-        self.submit.pack(pady=20, padx=20,side="top")
+        self.submit.pack(pady=10, padx=20,side="top")
         self.textfield = customtkinter.CTkLabel(self.submitframe, height=20, width=300, text="")
-        self.textfield.pack(pady=20,side="top")
+        self.textfield.pack(pady=10,side="top")
         var2= IntVar()
         self.override = customtkinter.CTkCheckBox(self.submitframe, text="Override precision value (this may kill your PC)", variable=var2, onvalue=1, offvalue=0, corner_radius=8, command=override)
         self.override.pack(pady=20, padx=20,side="top")
@@ -311,13 +414,7 @@ class app(customtkinter.CTk):
         self.animation_frame = customtkinter.CTkFrame(self, height=500)
         self.animation_frame.grid(column=0, row=0, rowspan=2, columnspan=2, padx=20, pady=20, sticky="nsew")
 
-def main():
-    app().mainloop()
 
-if __name__ == "__main__":
-    main()
-    
-# TO DO:
-# Add Tests for UI via Pytest
-    
+        stableOrbits("Stable 1")
 
+app().mainloop()

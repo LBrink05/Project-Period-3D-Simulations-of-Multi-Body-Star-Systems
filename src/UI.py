@@ -23,7 +23,7 @@ customtkinter.set_default_color_theme("dark-blue")
 CWDDIR = Path.cwd()
 
 #Startup Terminal Message
-print(" \n --Starting up 3D Multi-Body Stellar Simulator-- \n")
+print(" \n--Starting up 3D Multi-Body Stellar Simulator--\n")
 
 class app(customtkinter.CTk):
     def __init__(self):
@@ -34,7 +34,7 @@ class app(customtkinter.CTk):
         
         # Define all your functions INSIDE __init__ first
         def on_closing():
-            """Properly clean up before closing"""
+
             # Stop animation
             if self.anim is not None:
                 self.anim.event_source.stop()
@@ -46,6 +46,8 @@ class app(customtkinter.CTk):
             plt.close('all')  # Close any remaining figures
             
             # Close the window
+
+            print("\n--Shutting down 3D Multi-Body Stellar Simulator--\n")
             self.quit()
             self.destroy()
         
@@ -408,7 +410,7 @@ class app(customtkinter.CTk):
         self.precision.pack(pady=(5,20), padx=20,side="top")
         self.precision.set(0.01)
         self.slidertext.configure(text="Precision: " + str(round(self.precision.get(),4)) + " (size of timesteps, lower is more accurate)")
-        self.durationVariable = customtkinter.CTkEntry(self.submitframe, width=200, placeholder_text="Simulation duration (Seconds)")
+        self.durationVariable = customtkinter.CTkEntry(self.submitframe, width=200, placeholder_text="Simulation duration (s)")
         self.durationVariable.pack(pady=10, padx=20,side="top")
         self.submit = customtkinter.CTkButton(self.submitframe,text="Simulate", command=update)
         self.submit.pack(pady=10, padx=20,side="top")

@@ -1,7 +1,7 @@
 import ast
 import os
 from ast import literal_eval
-from tkinter import IntVar, ttk
+from tkinter import IntVar, ttk, Toplevel
 import customtkinter
 import numpy as np
 from pathlib import Path
@@ -32,7 +32,8 @@ print(" \n--Starting up 3D Multi-Body Stellar Simulator--\n")
 class app(customtkinter.CTk):
     def __init__(self):
         customtkinter.CTk.__init__(self)
-        
+
+        self.popup = None
         self.anim = None
         self.current_fig = None
         
@@ -297,8 +298,27 @@ class app(customtkinter.CTk):
         def save():
             if self.var1.get()!=1:
                 return
+            preset = self.dropdown1.get()
 
-            self.name_dialog = customtkinter.CTkInputDialog(text="Please name the config", title="Name Config")
+            self.popup = customtkinter.CTkToplevel(self)
+            self.popup.title("Name Config")
+            self.popup.geometry("400x200")
+            self.popup.resizable(False, False)
+
+            self.popup.grid_columnconfigure(1, weight=1)
+            self.popup.grid_rowconfigure(1, weight=1)
+
+            self.popup.frame = customtkinter.CTkFrame(self.popup)
+            self.popup.frame.grid(row=1, column=1, rowspan=2, columnspan=2, pady=0, padx=0, sticky="nsew")
+            self.popup.new_save = customtkinter.CTkCheckBox(self.popup.frame, text="New Save", onvalue=1, offvalue=0, command=check)
+            self.popup.new_save.pack(side="left", padx=(20,5), pady=5)
+            self.popup.name = customtkinter.CTkEntry(self.popup.frame, placeholder_text="Save Name")
+            self.popup.name.insert(0,self.dropdown1.get())
+            self.popup.name.configure(state="disabled")
+            self.popup.name.pack(side="right", padx=(5,20), pady=5)
+
+
+            #self.name_dialog = customtkinter.CTkInputDialog(text="Please name the config", title="Name Config")
 
             presets = open("Configurations/Customs.csv", "a")
             new = list((ast.literal_eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get()), self.name_dialog.get_input()))
@@ -310,6 +330,16 @@ class app(customtkinter.CTk):
             self.dropdown1.configure(values=full)
             self.dropdown1.set(full[-1])
 
+        def check():
+            if self.popup.new_save.get():
+                self.popup.name.configure(state="normal")
+
+                self.popup.name.delete(0,"end")
+            else:
+                self.popup.name.delete(0,"end")
+                self.popup.name.insert(0,self.dropdown1.get())
+                self.popup.name.configure(state="disabled")
+        
         # lists of configurations
         stables = list()
         customs = list()

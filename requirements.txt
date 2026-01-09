@@ -167,3 +167,4 @@ widgetsnbextension==4.0.14
 yarl==1.22.0
 pytest==25.0
 rebound==4.5.0
+regex==2025.11.3

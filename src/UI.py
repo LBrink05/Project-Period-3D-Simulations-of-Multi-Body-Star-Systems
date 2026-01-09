@@ -75,6 +75,10 @@ class app(customtkinter.CTk):
             # plotting the data
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
+            #showing time in animation
+            plottime = 0
+            timetext = ax.text2D(-0.30, 0.955, str(plottime) + " t*", transform=ax.transAxes, fontsize=24, color='black')   
+
             # animation of plot & points
             animated_plots = []
             points = []
@@ -94,7 +98,10 @@ class app(customtkinter.CTk):
                     points[body].set_data([frames[body, frame, 0]], [frames[body, frame, 1]])
                     points[body].set_3d_properties([frames[body, frame, 2]])
 
-                return animated_plots, points
+                #getting time passed per frame within simulation
+                plottime = float("%.2f"%(frame / 24))
+                timetext.set_text(str(plottime) + " t*")   
+                return animated_plots, points, timetext
 
             self.anim = FuncAnimation(fig, update_data, frames=TIMELINE.size, interval=10, blit=False)
 

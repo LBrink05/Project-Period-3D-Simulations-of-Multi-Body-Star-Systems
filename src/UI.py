@@ -1,3 +1,4 @@
+import ast
 import os
 from ast import literal_eval
 from tkinter import IntVar, ttk
@@ -135,7 +136,7 @@ class app(customtkinter.CTk):
 
         #logic for custom button
         def custom():
-            if var1.get() == 1:
+            if self.var1.get() == 1:
                 self.position1.configure(state="normal")
                 self.mass1.configure(state="normal")
                 self.velocity1.configure(state="normal")
@@ -237,7 +238,7 @@ class app(customtkinter.CTk):
                 self.velocity3.insert(0, "("+str(round(stables[num][8][0],3))+","+str(round(stables[num][8][1],3))+","+str(round(stables[num][8][2],3))+")")
 
                 #keeps variables editable/disabled based on checkbox status
-            if var1.get()==1:
+            if self.var1.get()==1:
                 return
             else:
                 self.position1.configure(state="disabled")
@@ -267,11 +268,11 @@ class app(customtkinter.CTk):
             
             num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
             precision = 0.01
-            if var2.get() == 0:
+            if self.var2.get() == 0:
                 precision = round(self.precision.get(), 4)
-            elif var2.get() == 1:
+            elif self.var2.get() == 1:
                 precision = float(self.precisionoverride.get())
-            if var1.get() == 1:
+            if self.var1.get() == 1:
                 if self.position1.get()[0]!="(" or self.position2.get()[0]!="(" or self.position3.get()[0]!="(" or self.position1.get()[-1]!=")" or self.position2.get()[-1]!=")" or self.position3.get()[-1]!=")" or self.velocity1.get()[0]!="(" or self.velocity2.get()[0]!="(" or self.velocity3.get()[0]!="(" or self.velocity1.get()[-1]!=")" or self.velocity2.get()[-1]!=")" or self.velocity3.get()[-1]!=")":
                     self.textfield.configure(text="Please include AND close brackets for position and velocity")
                     return
@@ -288,29 +289,26 @@ class app(customtkinter.CTk):
             print("Processing time of simulation: " + str(time_elapsed) + "\n")
 
         def override():
-            if var2.get() == 1:
+            if self.var2.get() == 1:
                 self.precisionoverride.configure(state="normal")
             else:
                 self.precisionoverride.configure(state="disabled")
 
         def save():
-            if var1.get()==1:
-                presets = open("Configurations/Customs.csv", "w")
-                new = list((eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get())))
-                customs.append(new)
-                for i in customs:
-                    presets.write(str(i) + "\n")
-                presets.close()
-
-                full.clear()
-                for i, stable in enumerate(stables):
-                    full.append('Stable ' + str(i + 1))
-                for x, customized in enumerate(customs):
-                    full.append('Custom ' + str(x + 1))
-                self.dropdown1.configure(values=full)
-                self.dropdown1.set(full[-1])
-            else:
+            if self.var1.get()!=1:
                 return
+
+            self.name_dialog = customtkinter.CTkInputDialog(text="Please name the config", title="Name Config")
+
+            presets = open("Configurations/Customs.csv", "a")
+            new = list((ast.literal_eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get()), self.name_dialog.get_input()))
+            customs.append(new)
+            presets.write(str(new) +'\n')
+
+            full.append(f'Custom {len(full)-len(stables)+1} - {new[-1]}')
+
+            self.dropdown1.configure(values=full)
+            self.dropdown1.set(full[-1])
 
         # lists of configurations
         stables = list()
@@ -359,8 +357,8 @@ class app(customtkinter.CTk):
         self.dropdown2.pack(padx=(20,20), pady=20, side="left")
 
         #button to allow for custom inputs
-        var1 = IntVar()
-        self.button = customtkinter.CTkCheckBox(master = self.dropbox_frame, text="Custom", variable=var1, onvalue=1, offvalue=0, corner_radius=8, command=custom)
+        self.var1 = IntVar()
+        self.button = customtkinter.CTkCheckBox(master = self.dropbox_frame, text="Custom", variable=self.var1, onvalue=1, offvalue=0, corner_radius=8, command=custom)
         self.button.pack(padx=20, pady=20, side="left")
 
         #tab view for the objects
@@ -435,8 +433,8 @@ class app(customtkinter.CTk):
         self.submit.pack(pady=10, padx=20,side="top")
         self.textfield = customtkinter.CTkLabel(self.submitframe, height=20, width=300, text="")
         self.textfield.pack(pady=10,side="top")
-        var2= IntVar()
-        self.override = customtkinter.CTkCheckBox(self.submitframe, text="Override precision value (this may kill your PC)", variable=var2, onvalue=1, offvalue=0, corner_radius=8, command=override)
+        self.var2= IntVar()
+        self.override = customtkinter.CTkCheckBox(self.submitframe, text="Override precision value (this may kill your PC)", variable=self.var2, onvalue=1, offvalue=0, corner_radius=8, command=override)
         self.override.pack(pady=20, padx=20,side="top")
         self.precisionoverride = customtkinter.CTkEntry(self.submitframe, placeholder_text="Override Precision Value:", width=150)
         self.precisionoverride.configure(state="disabled")

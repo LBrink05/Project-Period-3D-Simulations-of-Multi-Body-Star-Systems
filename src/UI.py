@@ -10,7 +10,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 from pathlib import Path
-import re
+import re 
+import datetime
 
 import leapfrog
 
@@ -21,6 +22,8 @@ customtkinter.set_default_color_theme("dark-blue")
 #setting cwd directory
 CWDDIR = Path.cwd()
 
+#Startup Terminal Message
+print(" \n --Starting up 3D Multi-Body Stellar Simulator-- \n")
 
 class app(customtkinter.CTk):
     def __init__(self):
@@ -244,6 +247,10 @@ class app(customtkinter.CTk):
 
         #submit button logic, checks if variables are valid and enters them in a list
         def update():
+            
+            #get time when button was pressed
+            submission_time = datetime.datetime.now()
+
             selection = self.dropdown1.get()
             num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
             precision = 0.01
@@ -262,6 +269,10 @@ class app(customtkinter.CTk):
             else:
                 leapfrog.Simulate(stables[num], precision, int(self.durationVariable.get()))
                 show_animation(int(self.durationVariable.get()))
+            
+            rendering_time = datetime.datetime.now()
+            time_elapsed = rendering_time -  submission_time
+            print("Processing time of simulation: " + str(time_elapsed) + "\n")
 
         def override():
             if var2.get() == 1:

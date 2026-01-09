@@ -424,6 +424,6 @@ class app(customtkinter.CTk):
         self.animation_frame.grid(column=0, row=0, rowspan=2, columnspan=2, padx=20, pady=20, sticky="nsew")
 
 
-        stableOrbits("Stable 1")
+        stableOrbits("Stable 1 - Equilateral Triangle")
 
 app().mainloop()

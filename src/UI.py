@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 from pathlib import Path
+import re
 
 import leapfrog
 
@@ -24,6 +25,29 @@ CWDDIR = Path.cwd()
 class app(customtkinter.CTk):
     def __init__(self):
         customtkinter.CTk.__init__(self)
+        
+        self.anim = None
+        self.current_fig = None
+        
+        # Define all your functions INSIDE __init__ first
+        def on_closing():
+            """Properly clean up before closing"""
+            # Stop animation
+            if self.anim is not None:
+                self.anim.event_source.stop()
+            
+            # Close matplotlib figures
+            if self.current_fig is not None:
+                plt.close(self.current_fig)
+            
+            plt.close('all')  # Close any remaining figures
+            
+            # Close the window
+            self.quit()
+            self.destroy()
+        
+        # NOW set the protocol (after the function is defined)
+        self.protocol("WM_DELETE_WINDOW", on_closing)
 
         def get_path(body):
             # Debugging
@@ -123,7 +147,7 @@ class app(customtkinter.CTk):
         #logic for dropdown selection and value filling
         def stableOrbits(selection):
             if selection.startswith('C'):
-                num = int(selection.strip('Custom')) - 1
+                num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
                 self.position1.configure(state="normal")
                 self.position1.delete(0, "end")
                 self.position1.insert(0, "(" + str(round(customs[num][0][0], 3)) + "," + str(round(customs[num][0][1], 3)) + "," + str(round(customs[num][0][2], 3)) + ")")
@@ -160,7 +184,7 @@ class app(customtkinter.CTk):
                 self.velocity3.delete(0, "end")
                 self.velocity3.insert(0, "(" + str(round(customs[num][8][0], 3)) + "," + str(round(customs[num][8][1], 3)) + "," + str(round(customs[num][8][2], 3)) + ")")
             else:
-                num = int(selection.strip('Stable'))-1
+                num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
                 self.position1.configure(state="normal")
                 self.position1.delete(0,"end")
                 self.position1.insert(0, "("+str(round(stables[num][0][0],3))+","+str(round(stables[num][0][1],3))+","+str(round(stables[num][0][2],3))+")")
@@ -213,7 +237,8 @@ class app(customtkinter.CTk):
 
         #submit button logic, checks if variables are valid and enters them in a list
         def update():
-            num = int(self.dropdown1.get().strip('Stable'))-1
+            selection = self.dropdown1.get()
+            num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
             precision = 0.01
             if var2.get() == 0:
                 precision = round(self.precision.get(), 4)
@@ -239,7 +264,7 @@ class app(customtkinter.CTk):
 
         def save():
             if var1.get()==1:
-                presets = open("Configurations/Presets.csv", "w")
+                presets = open("Configurations/Customs.csv", "w")
                 new = list((eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get())))
                 customs.append(new)
                 for i in customs:
@@ -262,54 +287,38 @@ class app(customtkinter.CTk):
         rt32 = np.sqrt(3)/2
         v = np.sqrt(1/(5*np.sqrt(3)))
         omega = np.sqrt(np.sqrt(3) / 3)
-        stable1 = list(((5, 0, 0),1,(0,v,0),(-0.5*5,rt32*5,0),1,(-v*rt32,-v/2,0),(-0.5*5,-rt32*5,0),1,(v*rt32,-v/2,0)))
+        '''stable1 = list(((5, 0, 0),1,(0,v,0),(-0.5*5,rt32*5,0),1,(-v*rt32,-v/2,0),(-0.5*5,-rt32*5,0),1,(v*rt32,-v/2,0)))
         stable2 = list(((2.57429,0,0),1,(0.216343, 0.332029,0),(-2.57429,0,0),1,(0.216343, 0.332029,0),(0,0,0),1,(-0.432686, -0.664058,0)))
         stable3 = list(((1,0,0),1,(0,0.5, 0),(-0.5,rt32,0),1,(-0.433,-0.25, 0),(-0.5,-rt32,0),1,(0.433,-0.25, 0)))
         stable4 = list((( 1.0, 0.0, 0), 1, ( 0.0,  omega, 0),(-0.5,  rt32, 0), 1, (-omega*rt32, -omega/2, 0),(-0.5, -rt32, 0), 1, ( omega*rt32, -omega/2, 0)))
-        stable5 = list((
-    (-13.02117, 0, 0), 1, ( 0.085236,  0.03498, 0),
-    ( 13.02117, 0, 0), 1, ( 0.085236,  0.03498, 0),
-    ( 0,        0, 0), 1, (-0.170472, -0.06996, 0)
-)) #butterfly I
-        stable6 = list((
-    (-12.04917, 0, 0), 1, ( 0.113643,  0.028219, 0),
-    ( 12.04917, 0, 0), 1, ( 0.113643,  0.028219, 0),
-    ( 0,        0, 0), 1, (-0.227286, -0.056438, 0)
-))  #butteryfly II
-        stable7 = list((
-    (-8.29368, 0, 0), 1, ( 0.161277,  0.137507, 0),
-    ( 8.29368, 0, 0), 1, ( 0.161277,  0.137507, 0),
-    ( 0,       0, 0), 1, (-0.322554, -0.275014, 0)
-)) #moth I
-        stable8 = list((
-    (-7.83516, 0, 0), 1, ( 0.156829,  0.16207, 0),
-    ( 7.83516, 0, 0), 1, ( 0.156829,  0.16207, 0),
-    ( 0,       0, 0), 1, (-0.313658, -0.32414, 0)
-)) #moth II
-        stable9 = list((
-    (-7.17921, 0, 0), 1, ( 0.208677,  0.130401, 0),
-    ( 7.17921, 0, 0), 1, ( 0.208677,  0.130401, 0),
-    ( 0,       0, 0), 1, (-0.417354, -0.260802, 0)
-)) #Yarn
-        stable10 = list((
-    (-8.57406, 0, 0), 1, ( 0.175521,  0.104039, 0),
-    ( 8.57406, 0, 0), 1, ( 0.175521,  0.104039, 0),
-    ( 0,       0, 0), 1, (-0.351042, -0.208078, 0)
-)) #yinyang
-        stables = list((stable1, stable2, stable3, stable4, stable5, stable6, stable7, stable8, stable9, stable10))
+        stable5 = list(((-13.02117, 0, 0), 1, ( 0.085236,  0.03498, 0),( 13.02117, 0, 0), 1, ( 0.085236,  0.03498, 0),( 0,        0, 0), 1, (-0.170472, -0.06996, 0))) #butterfly I
+        stable6 = list(((-12.04917, 0, 0), 1, ( 0.113643,  0.028219, 0),( 12.04917, 0, 0), 1, ( 0.113643,  0.028219, 0),( 0,        0, 0), 1, (-0.227286, -0.056438, 0)))  #butteryfly II
+        stable7 = list(((-8.29368, 0, 0), 1, ( 0.161277,  0.137507, 0),( 8.29368, 0, 0), 1, ( 0.161277,  0.137507, 0),( 0,       0, 0), 1, (-0.322554, -0.275014, 0))) #moth I
+        stable8 = list(((-7.83516, 0, 0), 1, ( 0.156829,  0.16207, 0),( 7.83516, 0, 0), 1, ( 0.156829,  0.16207, 0),( 0,       0, 0), 1, (-0.313658, -0.32414, 0))) #moth II
+        stable9 = list(((-7.17921, 0, 0), 1, ( 0.208677,  0.130401, 0),( 7.17921, 0, 0), 1, ( 0.208677,  0.130401, 0),( 0,       0, 0), 1, (-0.417354, -0.260802, 0))) #Yarn
+        stable10 = list(((-8.57406, 0, 0), 1, ( 0.175521,  0.104039, 0),( 8.57406, 0, 0), 1, ( 0.175521,  0.104039, 0),( 0,       0, 0), 1, (-0.351042, -0.208078, 0))) #yinyang
+        stables = list((stable1, stable2, stable3, stable4, stable5, stable6, stable7, stable8, stable9, stable10))'''
+        stables = list()
         customs = list()
         full = list()
 
-        with open("Configurations/Presets.csv", "r") as presets:
+        with open("Configurations/Stables.csv", "r") as presets:
+            for x in presets:
+                line = x.strip()
+                if line:
+                    stables.append(literal_eval(line))
+
+        with open("Configurations/Customs.csv", "r") as presets:
             for x in presets:
                 line = x.strip()
                 if line:
                     customs.append(literal_eval(line))
 
+
         for i, stable in enumerate(stables):
-            full.append('Stable ' + str(i+1))
+            full.append(f'Stable {i+1} - {stable[-1]}') 
         for x, customized in enumerate(customs):
-            full.append('Custom ' + str(x+1))
+            full.append(f'Custom {x+1} - {customized[-1]}')
 
         #Window config
         self.title("Three Body Problem Simulator")

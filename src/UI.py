@@ -3,17 +3,20 @@ from ast import literal_eval
 from tkinter import IntVar, ttk
 import customtkinter
 import numpy as np
+from pathlib import Path
+import re 
+import datetime
+import importlib
+
 import matplotlib
 matplotlib.use("tkagg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
-from pathlib import Path
-import re 
-import datetime
 
-import leapfrog
+
+
 
 customtkinter.set_appearance_mode("System")
 customtkinter.set_default_color_theme("dark-blue")
@@ -246,6 +249,10 @@ class app(customtkinter.CTk):
                 self.position3.configure(state="disabled")
                 self.mass3.configure(state="disabled")
                 self.velocity3.configure(state="disabled")
+        
+        def integrator(selection):
+            self.dropdown2.set(selection)
+            
 
         #submit button logic, checks if variables are valid and enters them in a list
         def update():
@@ -254,6 +261,10 @@ class app(customtkinter.CTk):
             submission_time = datetime.datetime.now()
 
             selection = self.dropdown1.get()
+            integrator_selection = importlib.import_module(self.dropdown2.get())
+
+            print("Using Numerical Method: ", str(integrator_selection) + "\n")
+            
             num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
             precision = 0.01
             if var2.get() == 0:
@@ -266,10 +277,10 @@ class app(customtkinter.CTk):
                     return
                 else:
                     customData = list((eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get())))
-                    leapfrog.Simulate(customData, precision, int(self.durationVariable.get()))
+                    integrator_selection.Simulate(customData, precision, int(self.durationVariable.get()))
                     show_animation(int(self.durationVariable.get()))
             else:
-                leapfrog.Simulate(stables[num], precision, int(self.durationVariable.get()))
+                integrator_selection.Simulate(stables[num], precision, int(self.durationVariable.get()))
                 show_animation(int(self.durationVariable.get()))
             
             rendering_time = datetime.datetime.now()
@@ -306,6 +317,9 @@ class app(customtkinter.CTk):
         customs = list()
         full = list()
 
+        # lists of numerical methods
+        integrator_list = list(["leapfrog", "forwardeuler"])
+
         with open("Configurations/Stables.csv", "r") as presets:
             for x in presets:
                 line = x.strip()
@@ -333,12 +347,17 @@ class app(customtkinter.CTk):
         self.grid_columnconfigure((2, 3), weight=0)
         self.grid_rowconfigure((0,3), weight=0)
         self.grid_rowconfigure((1,2), weight=2)
-
+        
         #drop down for stable systems
         self.dropbox_frame=customtkinter.CTkFrame(self)
         self.dropbox_frame.grid(column=2, row=0, pady=20, padx=20, sticky="nsew")
         self.dropdown1 = customtkinter.CTkOptionMenu(self.dropbox_frame, values=full, command=stableOrbits)
         self.dropdown1.pack(padx=(20,20), pady=20, side="left")
+
+        #drop down for numerical integrators
+        self.dropdown2 = customtkinter.CTkOptionMenu(self.dropbox_frame, values=integrator_list, command=integrator)
+        self.dropdown2.pack(padx=(20,20), pady=20, side="left")
+
         #button to allow for custom inputs
         var1 = IntVar()
         self.button = customtkinter.CTkCheckBox(master = self.dropbox_frame, text="Custom", variable=var1, onvalue=1, offvalue=0, corner_radius=8, command=custom)
@@ -428,6 +447,7 @@ class app(customtkinter.CTk):
         self.animation_frame.grid(column=0, row=0, rowspan=2, columnspan=2, padx=20, pady=20, sticky="nsew")
 
 
+        integrator("leapfrog")
         stableOrbits("Stable 1 - Equilateral Triangle")
 
 app().mainloop()

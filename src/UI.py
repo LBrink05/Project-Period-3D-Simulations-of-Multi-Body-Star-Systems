@@ -251,7 +251,7 @@ class app(customtkinter.CTk):
                 self.position3.configure(state="disabled")
                 self.mass3.configure(state="disabled")
                 self.velocity3.configure(state="disabled")
-        
+
         def integrator(selection):
             self.dropdown2.set(selection)
             
@@ -368,7 +368,7 @@ class app(customtkinter.CTk):
         full = list()
 
         # lists of numerical methods
-        integrator_list = list(["leapfrog", "forwardeuler"])
+        integrator_list = list(["leapfrog", "forwardeuler", "brutus"])
 
         with open("Configurations/Stables.csv", "r") as presets:
             for x in presets:

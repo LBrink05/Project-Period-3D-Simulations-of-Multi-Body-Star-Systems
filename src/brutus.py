@@ -23,8 +23,8 @@ def Simulate(data_list, precision, duration):
     timestep_num = int(TIMELINE.size / timestep)  # must be int
     frameratio = int(1 / timestep)  # ratio of frames to timesteps
 
-    pos = position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass)
-    frames = pos[:, ::frameratio, :]
+    pos, vel = position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass)
+    frames = np.concatenate([pos[:, ::frameratio, :], vel[:, ::frameratio, :]], axis=-1)
 
 
     for body in range(0, num_bodies):
@@ -52,12 +52,15 @@ def position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass):
             vz=start_vel[2][2])
     sim.dt = timestep
     pos = np.zeros((num_bodies, timestep_num, 3), dtype=np.float64)
+    vel = np.zeros((num_bodies, timestep_num, 3), dtype=np.float64)
     # initialize arrays
     prior_pos = start_pos.copy()
     prior_vel = start_vel.copy()
     # store initial pos
     for b in range(num_bodies):
         pos[b, 0] = prior_pos[b]
+        vel[b, 0] = prior_vel[b]
+
     # main loop
     for t in range(timestep_num):
         sim.integrate(t*timestep)
@@ -68,4 +71,4 @@ def position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass):
                 sim.particles[b].z
             )
 
-    return pos
+    return pos, vel

@@ -29,12 +29,11 @@ def Simulate(data_list, precision, duration):
     TIMESTEP_NUM = int(duration * 24 / timestep) + 1  # include t=0
 
     # compute positions
-    pos = position(timestep, TIMESTEP_NUM, NUM_BODIES, start_pos, start_vel, mass)
+    pos, vel = position(timestep, TIMESTEP_NUM, NUM_BODIES, start_pos, start_vel, mass)
 
     # select frames to save (1 per unit time)
     frameratio = max(1, int(1 / timestep))
-    frames = pos[:, ::frameratio, :]
-
+    frames = np.concatenate([pos[:, ::frameratio, :], vel[:, ::frameratio, :]], axis=-1)
     # save CSV files
     for body in range(NUM_BODIES):
         path = Path(str(CWDDIR)) / 'Simulated_Data' / f"body{body}.csv"
@@ -101,17 +100,20 @@ def position(TIMESTEP, TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL, MASS):
     # pos is vector pos[body][time_index][x,y,z]
 
     pos = np.zeros((NUM_BODIES, TIMESTEP_NUM, 3), dtype=np.float64)
+    vel = np.zeros((NUM_BODIES, TIMESTEP_NUM, 3), dtype=np.float64)
     prior_pos = START_POS.copy()
     prior_vel = START_VEL.copy()
 
     # store initial positions at t=0
     for b in range(NUM_BODIES):
         pos[b, 0] = prior_pos[b]
+        vel[b, 0] = prior_vel[b]
 
     # main loop over time steps
     for t in range(1, TIMESTEP_NUM):
         prior_vel, prior_pos = classical_leapfrog(MASS, TIMESTEP, NUM_BODIES, t, START_POS, START_VEL, prior_pos, prior_vel)
         for b in range(NUM_BODIES):
             pos[b, t] = prior_pos[b]
+            vel[b, t] = prior_vel[b]
 
-    return pos
+    return pos, vel

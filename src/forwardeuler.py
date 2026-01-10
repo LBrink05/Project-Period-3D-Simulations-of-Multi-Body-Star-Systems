@@ -21,8 +21,8 @@ def Simulate(data_list, precision, duration):
     timestep = precision
     timestep_num = int(TIMELINE.size / timestep)  # must be int
     frameratio = int(1 / timestep)  # ratio of frames to timesteps
-    pos = position(timestep, timestep_num, NUM_BODIES, start_pos, start_vel, mass)
-    frames = pos[:, ::frameratio, :]
+    pos, vel = position(timestep, timestep_num, NUM_BODIES, start_pos, start_vel, mass)
+    frames = np.concatenate([pos[:, ::frameratio, :], vel[:, ::frameratio, :]], axis=-1)
     
     for body in range(0, NUM_BODIES):
         path = Path(str(CWDDIR)) / 'Simulated_Data' / f"body{body}.csv"
@@ -81,16 +81,20 @@ def position(TIMESTEP, TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL, MASS):
     # function to calculate the position of bodies over time
     # pos is vector pos[body][x,y,z]
     pos = np.zeros((NUM_BODIES, TIMESTEP_NUM, 3), dtype=np.float64)
+    vel = np.zeros((NUM_BODIES, TIMESTEP_NUM, 3), dtype=np.float64)
     # initialize arrays
     prior_pos = START_POS.copy()
     prior_vel = START_VEL.copy()
-    # store initial pos
+
+    # store initial pos, vel
     for b in range(NUM_BODIES):
         pos[b, 0] = prior_pos[b]
+        vel[b, 0] = prior_vel[b]
     # main loop
     for t in range(TIMESTEP_NUM):
         prior_vel, prior_pos = forward_euler(MASS, TIMESTEP, NUM_BODIES, t, START_POS, START_VEL, prior_pos, prior_vel)
         for b in range(NUM_BODIES):
             pos[b, t] = prior_pos[b]
+            vel[b, t] = prior_vel[b]
     
-    return pos
+    return pos, vel

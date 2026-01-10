@@ -18,7 +18,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 
-import error_calc
+import data_analysis
 
 customtkinter.set_appearance_mode("System")
 customtkinter.set_default_color_theme("dark-blue")
@@ -72,7 +72,7 @@ class app(customtkinter.CTk):
             # CONSTANTS
             NUM_BODIES = len(os.listdir(get_path(-1)))
             TRAIL=200
-              # length of timeline
+            # length of timeline
             #TIMESTEP = 0.001 to 0.1
             with open(get_path(0), encoding="utf-8") as f:
                 row_count = sum(1 for _ in f)
@@ -82,7 +82,7 @@ class app(customtkinter.CTk):
             frames = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
             for body in range(0, NUM_BODIES):
                 path = get_path(body)
-                frames[body] = np.genfromtxt(path, delimiter=',')
+                frames[body] = np.genfromtxt(path, delimiter=',')[:, :3]
 
             # plotting the data
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
@@ -108,6 +108,21 @@ class app(customtkinter.CTk):
 
                 # head point (same color as trail)
                 points.append(ax.plot([], [], [], 'o', markersize=4, color='red')[0])
+
+
+        #def show_statistics(duration, precision, selection):
+            """#constants
+            NUM_BODIES = len(os.listdir(get_path(-1)))
+             
+            #opening reference data and simulation data
+            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_Brutus_dT_" + "0.0005") #or str(precision) #info about the configuration and timestep size
+            path_simulation = get_path(-1)
+
+            reference_lines = data_analysis.interpolate_data(NUM_BODIES, path_reference, precision)
+            simulated_lines = data_analysis.interpolate_data(NUM_BODIES, path_simulation, precision)
+            
+            percent_error = error_calc.percent_error(reference_lines, simulated_lines, precision)
+            print(percent_error)"""
 
             def update_data(frame):
 
@@ -321,6 +336,8 @@ class app(customtkinter.CTk):
             rendering_time = datetime.datetime.now()
             time_elapsed = rendering_time -  submission_time
             print("Processing time of simulation: " + str(time_elapsed) + "\n")
+
+            #show_statistics(int(self.durationVariable.get()), precision, selection)
 
         def override():
             if self.var2.get() == 1:

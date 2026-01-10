@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+from matplotlib import colors as mcolors
 
 
 
@@ -70,6 +72,7 @@ class app(customtkinter.CTk):
         def show_animation(duration):
             # CONSTANTS
             NUM_BODIES = len(os.listdir(get_path(-1)))
+            TRAIL=200
               # length of timeline
             #TIMESTEP = 0.001 to 0.1
             with open(get_path(0), encoding="utf-8") as f:
@@ -87,31 +90,57 @@ class app(customtkinter.CTk):
 
             #showing time in animation
             plottime = 0
-            timetext = ax.text2D(-0.30, 0.955, str(plottime) + " t*", transform=ax.transAxes, fontsize=24, color='black')   
+            timetext = ax.text2D(-0.30, 0.955, " t=" + str(plottime), transform=ax.transAxes, fontsize=24, color='black')
 
-            # animation of plot & points
-            animated_plots = []
+            # animation of trails & points (The fading trail was coded using ChatGPT)
+            trail_cols = []
+            trail_rgbs = []
             points = []
 
-            # initialize plots / points on plots
-            for body in range(0, len(frames)):
-                animated_plots.append(ax.plot([], [], [])[0])
-                points.append(ax.plot([], [], [], 'ro', markersize=4)[0])
+            for body in range(len(frames)):
+                # make one fading trail collection per body
+                lc = Line3DCollection([], linewidths=2)
+                ax.add_collection3d(lc, autolim=False)
+                trail_cols.append(lc)
+
+                # store a per-body base color (use default cycle)
+                base_color = ax._get_lines.get_next_color()
+                trail_rgbs.append(mcolors.to_rgb(base_color))
+
+                # head point (same color as trail)
+                points.append(ax.plot([], [], [], 'o', markersize=4, color=base_color)[0])
 
             def update_data(frame):
 
                 # go through every E.O.M frame by frame (motion has already been calculated)
                 for body in range(len(frames)):
-                    animated_plots[body].set_data(frames[body, :frame, 0], frames[body, :frame, 1])
-                    animated_plots[body].set_3d_properties(frames[body, :frame, 2])
+                    start = max(0, frame - TRAIL)
+                    xyz = frames[body, start:frame + 1, :]  # (k,3)
 
+                    if xyz.shape[0] < 2:
+                        trail_cols[body].set_segments([])
+                    else:
+                        # segments: (k-1, 2, 3)
+                        segs = np.stack([xyz[:-1], xyz[1:]], axis=1)
+                        trail_cols[body].set_segments(segs)
+
+                        nseg = segs.shape[0]
+                        # alpha from old -> new (0 -> 1)
+                        alphas = np.linspace(0.0, 1.0, nseg) ** 2
+
+                        r, g, b = trail_rgbs[body]
+                        rgba = np.column_stack([np.full(nseg, r), np.full(nseg, g), np.full(nseg, b), alphas])
+                        trail_cols[body].set_color(rgba)
+
+                    # head point
                     points[body].set_data([frames[body, frame, 0]], [frames[body, frame, 1]])
                     points[body].set_3d_properties([frames[body, frame, 2]])
 
                 #getting time passed per frame within simulation
                 plottime = float("%.2f"%(frame / 24))
-                timetext.set_text(str(plottime) + " t*")   
-                return animated_plots, points, timetext
+                timetext.set_text("t=" + str(plottime))
+                return trail_cols, points, timetext
+
 
             self.anim = FuncAnimation(fig, update_data, frames=TIMELINE.size, interval=10, blit=False)
 

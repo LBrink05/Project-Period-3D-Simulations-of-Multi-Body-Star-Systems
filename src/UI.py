@@ -1,7 +1,7 @@
 import ast
 import os
 from ast import literal_eval
-from tkinter import IntVar, ttk
+from tkinter import IntVar, ttk, Toplevel
 import customtkinter
 import numpy as np
 from pathlib import Path
@@ -32,7 +32,8 @@ print(" \n--Starting up 3D Multi-Body Stellar Simulator--\n")
 class app(customtkinter.CTk):
     def __init__(self):
         customtkinter.CTk.__init__(self)
-        
+
+        self.popup = None
         self.anim = None
         self.current_fig = None
         
@@ -250,7 +251,7 @@ class app(customtkinter.CTk):
                 self.position3.configure(state="disabled")
                 self.mass3.configure(state="disabled")
                 self.velocity3.configure(state="disabled")
-        
+
         def integrator(selection):
             self.dropdown2.set(selection)
             
@@ -302,37 +303,88 @@ class app(customtkinter.CTk):
             if self.var1.get()!=1:
                 return
 
-            self.name_dialog = customtkinter.CTkInputDialog(text="Please name the config", title="Name Config")
+            def submit():
+                new = list((ast.literal_eval(self.position1.get()), eval(self.mass1.get()), eval(self.velocity1.get()),
+                            eval(self.position2.get()), eval(self.mass2.get()), eval(self.velocity2.get()),
+                            eval(self.position3.get()), eval(self.mass3.get()), eval(self.velocity3.get()), self.popup.name.get().split('- ')[-1]))
+                if self.popup.new_save.get():
+                    presets = open("Configurations/Customs.csv", "a")
+                    customs.append(new)
+                    presets.write(str(new) + '\n')
 
-            presets = open("Configurations/Customs.csv", "a")
-            new = list((ast.literal_eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get()), self.name_dialog.get_input()))
-            customs.append(new)
-            presets.write(str(new) +'\n')
+                    full.append(f'Custom {len(full) - len(stables) + 1} - {new[-1]}')
+                    self.dropdown1.set(full[-1])
+                    presets.close()
+                else:
+                    if self.dropdown1.get().startswith("S"):
+                        print("Can not edit stable orbits")
+                        return
+                    index = int(self.dropdown1.get().split('-')[0].strip().split(' ')[1]) - 1
+                    customs[index] = new
+                    presets = open("Configurations/Customs.csv", "w")
+                    presets.write('\n')
+                    for i in customs:
+                        presets.write(str(i) + '\n')
 
-            full.append(f'Custom {len(full)-len(stables)+1} - {new[-1]}')
+                    full[len(stables) + index] = f'Custom {index + 1} - {new[-1]}'
+                    self.dropdown1.set(full[len(stables) + index])
 
-            self.dropdown1.configure(values=full)
-            self.dropdown1.set(full[-1])
+                self.dropdown1.configure(values=full)
 
+                self.popup.destroy()
+                self.popup.update()
+                return
+
+            self.popup = customtkinter.CTkToplevel(self)
+            self.popup.title("Name Config")
+            self.popup.geometry("400x200")
+            self.popup.resizable(False, False)
+            self.popup.attributes("-topmost", True)
+
+            self.popup.grid_columnconfigure(1, weight=1)
+            self.popup.grid_rowconfigure(1, weight=1)
+
+            self.popup.frame = customtkinter.CTkFrame(self.popup)
+            self.popup.frame.grid(row=1, column=1, rowspan=2, columnspan=2, pady=0, padx=0, sticky="nsew")
+            self.popup.new_save = customtkinter.CTkCheckBox(self.popup.frame, text="New Save", onvalue=1, offvalue=0, command=check)
+            self.popup.new_save.pack(side="left", padx=(40,5), pady=5)
+            self.popup.name = customtkinter.CTkEntry(self.popup.frame, placeholder_text="Save Name")
+            self.popup.name.insert(0,self.dropdown1.get())
+            self.popup.name.configure(state="disabled")
+            self.popup.name.pack(side="right", padx=(5,40), pady=5)
+
+            self.popup.submit = customtkinter.CTkButton(self.popup.frame, text="Submit", command=submit)
+            self.popup.submit.pack(side="bottom", padx=5, pady=(5,20))
+
+        def check():
+            if self.popup.new_save.get():
+                self.popup.name.configure(state="normal")
+
+                self.popup.name.delete(0,"end")
+            else:
+                self.popup.name.delete(0,"end")
+                self.popup.name.insert(0,self.dropdown1.get())
+                self.popup.name.configure(state="disabled")
+        
         # lists of configurations
         stables = list()
         customs = list()
         full = list()
 
         # lists of numerical methods
-        integrator_list = list(["leapfrog", "forwardeuler"])
+        integrator_list = list(["leapfrog", "forwardeuler", "brutus"])
 
         with open("Configurations/Stables.csv", "r") as presets:
             for x in presets:
                 line = x.strip()
                 if line:
-                    stables.append(literal_eval(line))
+                    stables.append(ast.literal_eval(line))
 
         with open("Configurations/Customs.csv", "r") as presets:
             for x in presets:
                 line = x.strip()
                 if line:
-                    customs.append(literal_eval(line))
+                    customs.append(ast.literal_eval(line))
 
 
         for i, stable in enumerate(stables):

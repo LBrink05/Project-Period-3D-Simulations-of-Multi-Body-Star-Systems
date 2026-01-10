@@ -18,8 +18,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 
-
-
+import error_calc
 
 customtkinter.set_appearance_mode("System")
 customtkinter.set_default_color_theme("dark-blue")
@@ -108,7 +107,7 @@ class app(customtkinter.CTk):
                 trail_rgbs.append(mcolors.to_rgb(base_color))
 
                 # head point (same color as trail)
-                points.append(ax.plot([], [], [], 'o', markersize=4, color=base_color)[0])
+                points.append(ax.plot([], [], [], 'o', markersize=4, color='red')[0])
 
             def update_data(frame):
 
@@ -424,7 +423,7 @@ class app(customtkinter.CTk):
 
         #Window config
         self.title("Three Body Problem Simulator")
-        self.geometry("1000x800")
+        self.geometry("1200x800")
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)

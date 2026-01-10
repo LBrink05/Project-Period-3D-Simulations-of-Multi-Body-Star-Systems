@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 import rebound
 
-# simplest possible numerical integrator method
+# most precise, most resource intensive numerical integrator method, used as reference for all other orbits.
 # CONSTANTS
 num_bodies = 3
 # setting cwd directory
@@ -30,6 +30,12 @@ def Simulate(data_list, precision, duration):
     for body in range(0, num_bodies):
         path = Path(str(CWDDIR)) / 'Simulated_Data' / f"body{body}.csv"
         np.savetxt(path, frames[body], delimiter=",")
+
+        #saving to reference data as well
+        path_reference = Path(str(CWDDIR)) / 'Reference_Data' / (str(data_list[-1]) + "_Brutus_dT_" + str(precision)) #adds info about the configuration and timestep size
+        path_reference.mkdir(parents=True, exist_ok=True)
+        path_reference = path_reference / f"body{body}.csv"
+        np.savetxt(path_reference, frames[body], delimiter=",")
 
 
 

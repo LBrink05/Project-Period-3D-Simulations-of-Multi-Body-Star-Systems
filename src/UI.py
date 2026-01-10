@@ -109,23 +109,7 @@ class app(customtkinter.CTk):
                 # head point (same color as trail)
                 points.append(ax.plot([], [], [], 'o', markersize=4, color='red')[0])
 
-
-        #def show_statistics(duration, precision, selection):
-            """#constants
-            NUM_BODIES = len(os.listdir(get_path(-1)))
-             
-            #opening reference data and simulation data
-            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_Brutus_dT_" + "0.0005") #or str(precision) #info about the configuration and timestep size
-            path_simulation = get_path(-1)
-
-            reference_lines = data_analysis.interpolate_data(NUM_BODIES, path_reference, precision)
-            simulated_lines = data_analysis.interpolate_data(NUM_BODIES, path_simulation, precision)
-            
-            percent_error = error_calc.percent_error(reference_lines, simulated_lines, precision)
-            print(percent_error)"""
-
             def update_data(frame):
-
                 # go through every E.O.M frame by frame (motion has already been calculated)
                 for body in range(len(frames)):
                     start = max(0, frame - TRAIL)
@@ -155,7 +139,6 @@ class app(customtkinter.CTk):
                 timetext.set_text("t=" + str(plottime))
                 return trail_cols, points, timetext
 
-
             self.anim = FuncAnimation(fig, update_data, frames=TIMELINE.size, interval=10, blit=False)
 
             #destroyes the old animation if ran multiple times
@@ -178,6 +161,49 @@ class app(customtkinter.CTk):
             canvas.draw()
 
 
+        def show_statistics(duration, precision, selection):
+            #constants
+            NUM_BODIES = len(os.listdir(get_path(-1)))
+            
+            #opening reference data and simulation data
+            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_Brutus_dT_" + "0.0005")
+            path_simulation = get_path(-1)
+
+            #ps is short for phase space
+            reference_lines = data_analysis.interpolate_ps(NUM_BODIES, path_reference, precision)
+            simulated_lines = data_analysis.interpolate_ps(NUM_BODIES, path_simulation, precision)
+            
+            # error function
+            error_func = data_analysis.error_function(reference_lines, simulated_lines)
+
+            # count frames
+            with open(get_path(0), encoding="utf-8") as f:
+                row_count = sum(1 for _ in f)
+
+            # timeline: 1 time unit = 24 frames
+            frames = np.arange(row_count)
+            TIMELINE = frames / 24
+
+            # Calculate error at each time point
+            errors = [error_func(t) for t in TIMELINE]
+
+            # Plot
+            fig2, ax2 = plt.subplots(figsize=(10, 6))
+            ax2.plot(TIMELINE, errors, linewidth=2, color='red')
+            ax2.set_xlabel('Time', fontsize=12)
+            ax2.set_ylabel('Percent Error (%)', fontsize=12)
+            ax2.set_title('Percent Error vs Time', fontsize=14, fontweight='bold')
+            ax2.grid(True, alpha=0.3, which='both')
+
+            # Destroy old statistics plot if it exists
+            for widget in self.statistics_frame.winfo_children():
+                widget.destroy()
+            
+            # Embed in GUI
+            canvas2 = FigureCanvasTkAgg(fig2, self.statistics_frame)
+            canvas_widget2 = canvas2.get_tk_widget()
+            canvas_widget2.pack(fill="both", expand=True)
+            canvas2.draw()
 
         #logic for custom button
         def custom():
@@ -337,7 +363,7 @@ class app(customtkinter.CTk):
             time_elapsed = rendering_time -  submission_time
             print("Processing time of simulation: " + str(time_elapsed) + "\n")
 
-            #show_statistics(int(self.durationVariable.get()), precision, selection)
+            show_statistics(int(self.durationVariable.get()), precision, selection)
 
         def override():
             if self.var2.get() == 1:
@@ -545,6 +571,10 @@ class app(customtkinter.CTk):
         #frame for simulation animation
         self.animation_frame = customtkinter.CTkFrame(self, height=500)
         self.animation_frame.grid(column=0, row=0, rowspan=2, columnspan=2, padx=20, pady=20, sticky="nsew")
+
+        #frame for statistics plot
+        self.statistics_frame = customtkinter.CTkFrame(self, height=300)
+        self.statistics_frame.grid(column=0, row=2, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
 
         integrator("leapfrog")

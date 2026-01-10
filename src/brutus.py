@@ -45,7 +45,6 @@ def position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass):
     sim.add(m=mass[2], x=start_pos[2][0], y=start_pos[2][1], z=start_pos[2][2], vx=start_vel[2][0], vy=start_vel[2][1],
             vz=start_vel[2][2])
     sim.dt = timestep
-    sim.status()
     pos = np.zeros((num_bodies, timestep_num, 3), dtype=np.float64)
     # initialize arrays
     prior_pos = start_pos.copy()

@@ -24,7 +24,8 @@ def Simulate(data_list, precision, duration):
     frameratio = int(1 / timestep)  # ratio of frames to timesteps
 
     pos = position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass)
-    frames = pos[:, ::frameratio*100, :]
+    frames = pos[:, ::frameratio, :]
+
 
     for body in range(0, num_bodies):
         path = Path(str(CWDDIR)) / 'Simulated_Data' / f"body{body}.csv"
@@ -43,7 +44,8 @@ def position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass):
             vz=start_vel[1][2])
     sim.add(m=mass[2], x=start_pos[2][0], y=start_pos[2][1], z=start_pos[2][2], vx=start_vel[2][0], vy=start_vel[2][1],
             vz=start_vel[2][2])
-
+    sim.dt = timestep
+    sim.status()
     pos = np.zeros((num_bodies, timestep_num, 3), dtype=np.float64)
     # initialize arrays
     prior_pos = start_pos.copy()
@@ -53,10 +55,12 @@ def position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass):
         pos[b, 0] = prior_pos[b]
     # main loop
     for t in range(timestep_num):
-        sim.integrate(timestep, t)
-        prior_vel = ((sim.particles[0].vx, sim.particles[0].vy, sim.particles[0].vz), (sim.particles[1].vx, sim.particles[1].vy, sim.particles[1].vz), sim.particles[2].vx, sim.particles[2].vy, sim.particles[2].vz)
-        prior_pos = ((sim.particles[0].x, sim.particles[0].y, sim.particles[0].z), (sim.particles[1].x, sim.particles[1].y, sim.particles[1].z), sim.particles[2].x, sim.particles[2].y, sim.particles[2].z)
+        sim.integrate(t*timestep)
         for b in range(num_bodies):
-            pos[b, t] = prior_pos[b]
+            pos[b,t] = (
+                sim.particles[b].x,
+                sim.particles[b].y,
+                sim.particles[b].z
+            )
 
     return pos

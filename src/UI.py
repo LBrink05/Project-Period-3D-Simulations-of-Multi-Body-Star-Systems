@@ -126,7 +126,7 @@ class app(customtkinter.CTk):
 
                         nseg = segs.shape[0]
                         # alpha from old -> new (0 -> 1)
-                        alphas = np.linspace(0.0, 1.0, nseg) ** 2
+                        alphas = np.linspace(0.0, 1.0, nseg) ** (3/2)
 
                         r, g, b = trail_rgbs[body]
                         rgba = np.column_stack([np.full(nseg, r), np.full(nseg, g), np.full(nseg, b), alphas])

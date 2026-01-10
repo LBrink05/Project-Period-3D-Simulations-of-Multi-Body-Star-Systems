@@ -281,8 +281,12 @@ class app(customtkinter.CTk):
                     integrator_selection.Simulate(customData, precision, int(self.durationVariable.get()))
                     show_animation(int(self.durationVariable.get()))
             else:
-                integrator_selection.Simulate(stables[num], precision, int(self.durationVariable.get()))
-                show_animation(int(self.durationVariable.get()))
+                if self.dropdown1.get().startswith("s"):
+                    integrator_selection.Simulate(stables[num], precision, int(self.durationVariable.get()))
+                    show_animation(int(self.durationVariable.get()))
+                else:
+                    integrator_selection.Simulate(customs[num], precision, int(self.durationVariable.get()))
+                    show_animation(int(self.durationVariable.get()))
             
             rendering_time = datetime.datetime.now()
             time_elapsed = rendering_time -  submission_time

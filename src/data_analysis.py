@@ -55,7 +55,7 @@ def calculate_hamiltonian(phase_space_data, masses, G=1.0):
 
     num_bodies = len(phase_space_data)
     
-    # Kinetic energy: T = (1/2) * Σ m_i * v_i^2
+    # Kinetic energy: T = (1/2) * sum m_i * v_i^2
     T = 0.0
     for i in range(num_bodies):
         pos_vel = phase_space_data[i]
@@ -63,7 +63,7 @@ def calculate_hamiltonian(phase_space_data, masses, G=1.0):
         v_squared = vx**2 + vy**2 + vz**2
         T += 0.5 * masses[i] * v_squared
     
-    # Potential energy: V = -G * Σ Σ (m_i * m_j / r_ij)
+    # Potential energy: V = -G * sum sum (m_i * m_j / r_ij)
     V = 0.0
     for i in range(num_bodies):
         for j in range(i + 1, num_bodies):

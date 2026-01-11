@@ -169,31 +169,65 @@ class app(customtkinter.CTk):
             path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_Brutus_dT_" + "0.0005")
             path_simulation = get_path(-1)
 
-            #ps is short for phase space
-            reference_lines = data_analysis.interpolate_ps(NUM_BODIES, path_reference, precision)
-            simulated_lines = data_analysis.interpolate_ps(NUM_BODIES, path_simulation, precision)
+            # Read phase space data
+            reference_data = data_analysis.read_phase_space(NUM_BODIES, path_reference)
+            simulated_data = data_analysis.read_phase_space(NUM_BODIES, path_simulation)
             
-            # error function
-            error_func = data_analysis.error_function(reference_lines, simulated_lines)
+            # Extract masses from configuration
+            if selection.startswith('S'):
+                num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
+                masses = [stables[num][1], stables[num][4], stables[num][7]]
+            else:
+                num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
+                masses = [customs[num][1], customs[num][4], customs[num][7]]
+            
+            # Create error function
+            error_func = data_analysis.error_function(reference_data, simulated_data, masses)
 
-            # count frames
-            with open(get_path(0), encoding="utf-8") as f:
-                row_count = sum(1 for _ in f)
+            # count frames - use minimum length between reference and simulation
+            min_frames = min(len(simulated_data[0]), len(reference_data[0]))
 
             # timeline: 1 time unit = 24 frames
-            frames = np.arange(row_count)
+            frames = np.arange(min_frames)
             TIMELINE = frames / 24
 
-            # Calculate error at each time point
-            errors = [error_func(t) for t in TIMELINE]
+            # Calculate errors at each time point
+            trajectory_errors = []
+            hamiltonian_errors = []
+            
+            for frame in frames:
+                traj_err, ham_err = error_func(frame)
+                trajectory_errors.append(traj_err)
+                hamiltonian_errors.append(ham_err)
+            
+            # Calculate RMS errors
+            traj_rms = data_analysis.calculate_rms_error(trajectory_errors, dt=1.0/24.0)
+            ham_rms = data_analysis.calculate_rms_error(hamiltonian_errors, dt=1.0/24.0)
 
-            # Plot
-            fig2, ax2 = plt.subplots(figsize=(10, 6))
-            ax2.plot(TIMELINE, errors, linewidth=2, color='red')
-            ax2.set_xlabel('Time', fontsize=12)
-            ax2.set_ylabel('Percent Error (%)', fontsize=12)
-            ax2.set_title('Percent Error vs Time', fontsize=14, fontweight='bold')
+            # Create plot with two subplots
+            fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+            
+            # Trajectory Error Plot
+            ax1.plot(TIMELINE, trajectory_errors, linewidth=2, color='red', label='Trajectory Error')
+            ax1.axhline(y=traj_rms, color='darkred', linestyle='--', linewidth=1.5, 
+                       label=f'RMS = {traj_rms:.4f}%')
+            ax1.set_xlabel('Time', fontsize=11)
+            ax1.set_ylabel('Trajectory Error E_% (%)', fontsize=11)
+            ax1.set_title('Phase Space Trajectory Error vs Time', fontsize=12, fontweight='bold')
+            ax1.grid(True, alpha=0.3, which='both')
+            ax1.legend(loc='upper right')
+            
+            # Hamiltonian Error Plot
+            ax2.plot(TIMELINE, hamiltonian_errors, linewidth=2, color='blue', label='Hamiltonian Error')
+            ax2.axhline(y=ham_rms, color='darkblue', linestyle='--', linewidth=1.5,
+                       label=f'RMS = {ham_rms:.4f}%')
+            ax2.set_xlabel('Time', fontsize=11)
+            ax2.set_ylabel('Hamiltonian Error E_H% (%)', fontsize=11)
+            ax2.set_title('Energy Conservation Error vs Time', fontsize=12, fontweight='bold')
             ax2.grid(True, alpha=0.3, which='both')
+            ax2.legend(loc='upper right')
+            
+            plt.tight_layout()
 
             # Destroy old statistics plot if it exists
             for widget in self.statistics_frame.winfo_children():
@@ -204,6 +238,12 @@ class app(customtkinter.CTk):
             canvas_widget2 = canvas2.get_tk_widget()
             canvas_widget2.pack(fill="both", expand=True)
             canvas2.draw()
+            
+            # Print summary statistics to console
+            print(f"\nError Analysis Summary:")
+            print(f"Trajectory Error RMS: {traj_rms:.6f}%")
+            print(f"Hamiltonian Error RMS: {ham_rms:.6f}%")
+            print(f"Total frames analyzed: {min_frames}\n")
 
         #logic for custom button
         def custom():

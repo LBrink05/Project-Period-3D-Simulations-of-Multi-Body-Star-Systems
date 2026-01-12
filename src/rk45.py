@@ -21,7 +21,7 @@ def Simulate(data_list, precision, duration):
     timestep = precision
     timestep_num = int(TIMELINE.size / timestep)  # must be int
     frameratio = int(1 / timestep)  # ratio of frames to timesteps
-    pos, vel = position(timestep, timestep_num, NUM_BODIES, start_pos, start_vel, mass)
+    pos, vel = position(TIMELINE, NUM_BODIES, start_pos, start_vel, mass)
     frames = np.concatenate([pos[:, ::frameratio, :], vel[:, ::frameratio, :]], axis=-1)
     
     for body in range(0, NUM_BODIES):

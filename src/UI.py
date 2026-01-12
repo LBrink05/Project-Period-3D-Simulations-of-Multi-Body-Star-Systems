@@ -204,13 +204,18 @@ class app(customtkinter.CTk):
             traj_max = data_analysis.calculate_max_error(trajectory_errors, dt=1.0/24.0)
             ham_max = data_analysis.calculate_max_error(hamiltonian_errors, dt=1.0/24.0)
 
+            print(f"DEBUG: traj_max = {traj_max}, type = {type(traj_max)}")
+            print(f"DEBUG: ham_max = {ham_max}, type = {type(ham_max)}")
+            print(f"DEBUG: Formatted traj_max = {traj_max:.4f}")
+            print(f"DEBUG: Formatted ham_max = {ham_max:.4f}")
+
             # Create plot with two subplots
             fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
             
             # Trajectory Error Plot
             ax1.plot(TIMELINE, trajectory_errors, linewidth=2, color='red', label='Trajectory Error')
             ax1.axhline(y=traj_max, color='darkred', linestyle='--', linewidth=1.5, 
-                       label=f'%_MAX = {traj_max:.4f}%')
+                       label=f'%_MAX = {traj_max:.2e}%')
             ax1.set_xlabel('Time', fontsize=11)
             ax1.set_ylabel('Trajectory Error E_% (%)', fontsize=11)
             ax1.set_title('Phase Space Trajectory Error vs Time', fontsize=12, fontweight='bold')
@@ -220,7 +225,7 @@ class app(customtkinter.CTk):
             # Hamiltonian Error Plot
             ax2.plot(TIMELINE, hamiltonian_errors, linewidth=2, color='blue', label='Hamiltonian Error')
             ax2.axhline(y=ham_max, color='darkblue', linestyle='--', linewidth=1.5,
-                       label=f'H_MAX = {ham_max:.4f}%')
+                       label=f'H_MAX = {ham_max:.2e}%')
             ax2.set_xlabel('Time', fontsize=11)
             ax2.set_ylabel('Hamiltonian Error E_H% (%)', fontsize=11)
             ax2.set_title('Energy Conservation Error vs Time', fontsize=12, fontweight='bold')

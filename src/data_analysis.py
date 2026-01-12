@@ -121,7 +121,7 @@ def error_function(reference_data, simulated_data, masses):
     
     return error_at_time
 
-def calculate_rms_error(errors, dt=1.0):
+'''def calculate_rms_error(errors, dt=1.0):
     errors_array = np.array(errors)
     # Filter out infinite values
     finite_errors = errors_array[np.isfinite(errors_array)]
@@ -132,4 +132,16 @@ def calculate_rms_error(errors, dt=1.0):
     T = len(finite_errors) * dt
     sum_squared = np.sum(finite_errors**2) * dt
     
-    return np.sqrt(sum_squared / T)
+    return np.sqrt(sum_squared / T)'''
+
+def calculate_max_error(errors, dt=1.0):
+    errors_array = np.array(errors)
+    # Filter out infinite values
+    finite_errors = errors_array[np.isfinite(errors_array)]
+    
+    if len(finite_errors) == 0:
+        return float('inf')
+    
+    max_error = finite_errors.max()
+    
+    return max_error

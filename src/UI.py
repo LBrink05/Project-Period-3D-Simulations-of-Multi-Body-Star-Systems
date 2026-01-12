@@ -200,17 +200,17 @@ class app(customtkinter.CTk):
                 trajectory_errors.append(traj_err)
                 hamiltonian_errors.append(ham_err)
             
-            # Calculate RMS errors
-            traj_rms = data_analysis.calculate_rms_error(trajectory_errors, dt=1.0/24.0)
-            ham_rms = data_analysis.calculate_rms_error(hamiltonian_errors, dt=1.0/24.0)
+            # Calculate max errors
+            traj_max = data_analysis.calculate_max_error(trajectory_errors, dt=1.0/24.0)
+            ham_max = data_analysis.calculate_max_error(hamiltonian_errors, dt=1.0/24.0)
 
             # Create plot with two subplots
             fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
             
             # Trajectory Error Plot
             ax1.plot(TIMELINE, trajectory_errors, linewidth=2, color='red', label='Trajectory Error')
-            ax1.axhline(y=traj_rms, color='darkred', linestyle='--', linewidth=1.5, 
-                       label=f'RMS = {traj_rms:.4f}%')
+            ax1.axhline(y=traj_max, color='darkred', linestyle='--', linewidth=1.5, 
+                       label=f'%_MAX = {traj_max:.4f}%')
             ax1.set_xlabel('Time', fontsize=11)
             ax1.set_ylabel('Trajectory Error E_% (%)', fontsize=11)
             ax1.set_title('Phase Space Trajectory Error vs Time', fontsize=12, fontweight='bold')
@@ -219,8 +219,8 @@ class app(customtkinter.CTk):
             
             # Hamiltonian Error Plot
             ax2.plot(TIMELINE, hamiltonian_errors, linewidth=2, color='blue', label='Hamiltonian Error')
-            ax2.axhline(y=ham_rms, color='darkblue', linestyle='--', linewidth=1.5,
-                       label=f'RMS = {ham_rms:.4f}%')
+            ax2.axhline(y=ham_max, color='darkblue', linestyle='--', linewidth=1.5,
+                       label=f'H_MAX = {ham_max:.4f}%')
             ax2.set_xlabel('Time', fontsize=11)
             ax2.set_ylabel('Hamiltonian Error E_H% (%)', fontsize=11)
             ax2.set_title('Energy Conservation Error vs Time', fontsize=12, fontweight='bold')
@@ -241,8 +241,6 @@ class app(customtkinter.CTk):
             
             # Print summary statistics to console
             print(f"\nError Analysis Summary:")
-            print(f"Trajectory Error RMS: {traj_rms:.6f}%")
-            print(f"Hamiltonian Error RMS: {ham_rms:.6f}%")
             print(f"Total frames analyzed: {min_frames}\n")
 
         #logic for custom button

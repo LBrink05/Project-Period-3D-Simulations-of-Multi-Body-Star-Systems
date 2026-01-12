@@ -44,6 +44,7 @@ def position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass):
     # pos is vector pos[body][x,y,z]
 
     sim = rebound.Simulation()
+    sim.integrator("ias15")
     sim.add(m=mass[0], x=start_pos[0][0], y=start_pos[0][1], z=start_pos[0][2], vx=start_vel[0][0], vy=start_vel[0][1],
             vz=start_vel[0][2])
     sim.add(m=mass[1], x=start_pos[1][0], y=start_pos[1][1], z=start_pos[1][2], vx=start_vel[1][0], vy=start_vel[1][1],

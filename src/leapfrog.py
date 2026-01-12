@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit
 from pathlib import Path
 
-# symplectic integrators (leapfrog) preserve energy/phase better for long-term dynamics
+# Symplectic integrators (leapfrog) preserve energy/phase better for long-term dynamics
 
 # CONSTANTS
 NUM_BODIES = 3
@@ -10,39 +10,50 @@ NUM_BODIES = 3
 # setting cwd directory
 CWDDIR = Path.cwd()
 
-# function to be called in UI
 def Simulate(data_list, precision, duration):
+    """
+    data_list format:
+      (r1), m1, (v1), (r2), m2, (v2), (r3), m3, (v3)
+    precision: timestep (in "hours" if duration*24 is used elsewhere in your codebase)
+    duration: total duration (same unit base as before; original code used duration*24)
+    """
     mass = np.array([data_list[1], data_list[4], data_list[7]], dtype=np.float64)
     start_pos = np.array([
         [data_list[0][0], data_list[0][1], data_list[0][2]],
         [data_list[3][0], data_list[3][1], data_list[3][2]],
-        [data_list[6][0], data_list[6][1], data_list[6][2]]
+        [data_list[6][0], data_list[6][1], data_list[6][2]],
     ], dtype=np.float64)
     start_vel = np.array([
         [data_list[2][0], data_list[2][1], data_list[2][2]],
         [data_list[5][0], data_list[5][1], data_list[5][2]],
-        [data_list[8][0], data_list[8][1], data_list[8][2]]
+        [data_list[8][0], data_list[8][1], data_list[8][2]],
     ], dtype=np.float64)
 
-    # calculate number of steps
-    timestep = precision
-    TIMESTEP_NUM = int(duration * 24 / timestep) + 1  # include t=0
+    timestep = float(precision)
+    total_steps = int(duration * 24 / timestep) + 1  # include t=0
 
-    # compute positions
-    pos, vel = position(timestep, TIMESTEP_NUM, NUM_BODIES, start_pos, start_vel, mass)
+    # Save ~1 frame per unit time (same intent as previous code)
+    sample_every = max(1, int(1 / timestep))
+    out_steps = (total_steps - 1) // sample_every + 1
 
-    # select frames to save (1 per unit time)
-    frameratio = max(1, int(1 / timestep))
-    frames = np.concatenate([pos[:, ::frameratio, :], vel[:, ::frameratio, :]], axis=-1)
+    frames = position_sampled(timestep, total_steps, sample_every, out_steps, NUM_BODIES, start_pos, start_vel, mass)
+
     # save CSV files
+    out_dir = Path(str(CWDDIR)) / "Simulated_Data"
+    out_dir.mkdir(parents=True, exist_ok=True)
     for body in range(NUM_BODIES):
-        path = Path(str(CWDDIR)) / 'Simulated_Data' / f"body{body}.csv"
-        path.parent.mkdir(parents=True, exist_ok=True)  # ensure folder exists
+        path = out_dir / f"body{body}.csv"
         np.savetxt(path, frames[body], delimiter=",")
 
-# function to calculate acceleration at any configuration of bodies
+
+# --- Core physics and integrator (Numba) ---
+
 @njit
-def acceleration(prior_pos, body, MASS, NUM_BODIES):
+def acceleration_components(prior_pos, body, MASS, NUM_BODIES):
+    """
+    Returns (ax, ay, az) for a single body.
+    Avoids heap allocations in the tight loop.
+    """
     ax = 0.0
     ay = 0.0
     az = 0.0
@@ -57,63 +68,99 @@ def acceleration(prior_pos, body, MASS, NUM_BODIES):
             ry = prior_pos[other, 1] - py
             rz = prior_pos[other, 2] - pz
 
-            r2 = rx * rx + ry * ry + rz * rz + 0.001**2  # softening
+            r2 = rx * rx + ry * ry + rz * rz + 0.001**2  # softening (keep as in original file)
             r3 = r2 ** 1.5
 
             ax += MASS[other] * rx / r3
             ay += MASS[other] * ry / r3
             az += MASS[other] * rz / r3
 
-    return np.array([ax, ay, az], dtype=np.float64)
+    return ax, ay, az
+
 
 @njit
-def classical_leapfrog(MASS, TIMESTEP, NUM_BODIES, time, START_POS, START_VEL, prior_pos, prior_vel):
-    # symplectic numerical method to approximate chaotic system
-
-    # compute acceleration at current positions
-    acc = np.zeros((NUM_BODIES, 3), dtype=np.float64)
+def compute_accelerations(prior_pos, MASS, NUM_BODIES, acc_out):
+    """
+    Fills acc_out[b, :] in place.
+    """
     for b in range(NUM_BODIES):
-        acc[b] = acceleration(prior_pos, b, MASS, NUM_BODIES)
+        ax, ay, az = acceleration_components(prior_pos, b, MASS, NUM_BODIES)
+        acc_out[b, 0] = ax
+        acc_out[b, 1] = ay
+        acc_out[b, 2] = az
 
-    # half-step velocity update
-    for b in range(NUM_BODIES):
-        prior_vel[b] += 0.5 * TIMESTEP * acc[b]
-
-    # full-step position update
-    for b in range(NUM_BODIES):
-        prior_pos[b] += prior_vel[b] * TIMESTEP
-
-    # compute new acceleration at updated positions
-    acc_new = np.zeros((NUM_BODIES, 3), dtype=np.float64)
-    for b in range(NUM_BODIES):
-        acc_new[b] = acceleration(prior_pos, b, MASS, NUM_BODIES)
-
-    # complete velocity update with second half-step
-    for b in range(NUM_BODIES):
-        prior_vel[b] += 0.5 * TIMESTEP * acc_new[b]
-
-    return prior_vel, prior_pos
 
 @njit
-def position(TIMESTEP, TIMESTEP_NUM, NUM_BODIES, START_POS, START_VEL, MASS):
-    # function to calculate the position of bodies over time
-    # pos is vector pos[body][time_index][x,y,z]
+def classical_leapfrog_inplace(MASS, TIMESTEP, NUM_BODIES, prior_pos, prior_vel, acc, acc_new):
+    """
+    One leapfrog (velocity Verlet) step in place.
+    Uses preallocated acc/acc_new to avoid per-step allocations.
+    """
+    # acceleration at current positions
+    compute_accelerations(prior_pos, MASS, NUM_BODIES, acc)
 
-    pos = np.zeros((NUM_BODIES, TIMESTEP_NUM, 3), dtype=np.float64)
-    vel = np.zeros((NUM_BODIES, TIMESTEP_NUM, 3), dtype=np.float64)
+    # half-step velocity
+    for b in range(NUM_BODIES):
+        prior_vel[b, 0] += 0.5 * TIMESTEP * acc[b, 0]
+        prior_vel[b, 1] += 0.5 * TIMESTEP * acc[b, 1]
+        prior_vel[b, 2] += 0.5 * TIMESTEP * acc[b, 2]
+
+    # full-step position
+    for b in range(NUM_BODIES):
+        prior_pos[b, 0] += prior_vel[b, 0] * TIMESTEP
+        prior_pos[b, 1] += prior_vel[b, 1] * TIMESTEP
+        prior_pos[b, 2] += prior_vel[b, 2] * TIMESTEP
+
+    # acceleration at updated positions
+    compute_accelerations(prior_pos, MASS, NUM_BODIES, acc_new)
+
+    # second half-step velocity
+    for b in range(NUM_BODIES):
+        prior_vel[b, 0] += 0.5 * TIMESTEP * acc_new[b, 0]
+        prior_vel[b, 1] += 0.5 * TIMESTEP * acc_new[b, 1]
+        prior_vel[b, 2] += 0.5 * TIMESTEP * acc_new[b, 2]
+
+
+@njit
+def position_sampled(TIMESTEP, TOTAL_STEPS, SAMPLE_EVERY, OUT_STEPS, NUM_BODIES, START_POS, START_VEL, MASS):
+    """
+    Runs the integrator for TOTAL_STEPS and stores only every SAMPLE_EVERY step.
+    Returns frames shaped (NUM_BODIES, OUT_STEPS, 6) with [x,y,z,vx,vy,vz].
+    """
+    frames = np.zeros((NUM_BODIES, OUT_STEPS, 6), dtype=np.float64)
+
     prior_pos = START_POS.copy()
     prior_vel = START_VEL.copy()
 
-    # store initial positions at t=0
+    acc = np.zeros((NUM_BODIES, 3), dtype=np.float64)
+    acc_new = np.zeros((NUM_BODIES, 3), dtype=np.float64)
+
+    out_i = 0
+    # store t=0
     for b in range(NUM_BODIES):
-        pos[b, 0] = prior_pos[b]
-        vel[b, 0] = prior_vel[b]
+        frames[b, out_i, 0] = prior_pos[b, 0]
+        frames[b, out_i, 1] = prior_pos[b, 1]
+        frames[b, out_i, 2] = prior_pos[b, 2]
+        frames[b, out_i, 3] = prior_vel[b, 0]
+        frames[b, out_i, 4] = prior_vel[b, 1]
+        frames[b, out_i, 5] = prior_vel[b, 2]
 
-    # main loop over time steps
-    for t in range(1, TIMESTEP_NUM):
-        prior_vel, prior_pos = classical_leapfrog(MASS, TIMESTEP, NUM_BODIES, t, START_POS, START_VEL, prior_pos, prior_vel)
-        for b in range(NUM_BODIES):
-            pos[b, t] = prior_pos[b]
-            vel[b, t] = prior_vel[b]
+    out_i += 1
 
-    return pos, vel
+    for t in range(1, TOTAL_STEPS):
+        classical_leapfrog_inplace(MASS, TIMESTEP, NUM_BODIES, prior_pos, prior_vel, acc, acc_new)
+
+        if t % SAMPLE_EVERY == 0:
+            for b in range(NUM_BODIES):
+                frames[b, out_i, 0] = prior_pos[b, 0]
+                frames[b, out_i, 1] = prior_pos[b, 1]
+                frames[b, out_i, 2] = prior_pos[b, 2]
+                frames[b, out_i, 3] = prior_vel[b, 0]
+                frames[b, out_i, 4] = prior_vel[b, 1]
+                frames[b, out_i, 5] = prior_vel[b, 2]
+            out_i += 1
+
+            if out_i >= OUT_STEPS:
+                break
+
+    return frames

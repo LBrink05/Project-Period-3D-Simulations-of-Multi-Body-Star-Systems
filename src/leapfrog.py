@@ -11,12 +11,6 @@ NUM_BODIES = 3
 CWDDIR = Path.cwd()
 
 def Simulate(data_list, precision, duration):
-    """
-    data_list format:
-      (r1), m1, (v1), (r2), m2, (v2), (r3), m3, (v3)
-    precision: timestep (in "hours" if duration*24 is used elsewhere in your codebase)
-    duration: total duration (same unit base as before; original code used duration*24)
-    """
     mass = np.array([data_list[1], data_list[4], data_list[7]], dtype=np.float64)
     start_pos = np.array([
         [data_list[0][0], data_list[0][1], data_list[0][2]],
@@ -32,7 +26,6 @@ def Simulate(data_list, precision, duration):
     timestep = float(precision)
     total_steps = int(duration * 24 / timestep) + 1  # include t=0
 
-    # Save ~1 frame per unit time (same intent as previous code)
     sample_every = max(1, int(1 / timestep))
     out_steps = (total_steps - 1) // sample_every + 1
 
@@ -50,10 +43,6 @@ def Simulate(data_list, precision, duration):
 
 @njit
 def acceleration_components(prior_pos, body, MASS, NUM_BODIES):
-    """
-    Returns (ax, ay, az) for a single body.
-    Avoids heap allocations in the tight loop.
-    """
     ax = 0.0
     ay = 0.0
     az = 0.0
@@ -68,7 +57,7 @@ def acceleration_components(prior_pos, body, MASS, NUM_BODIES):
             ry = prior_pos[other, 1] - py
             rz = prior_pos[other, 2] - pz
 
-            r2 = rx * rx + ry * ry + rz * rz + 0.001**2  # softening (keep as in original file)
+            r2 = rx * rx + ry * ry + rz * rz + 0.001**2
             r3 = r2 ** 1.5
 
             ax += MASS[other] * rx / r3

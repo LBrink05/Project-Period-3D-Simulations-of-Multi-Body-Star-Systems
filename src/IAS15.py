@@ -32,10 +32,11 @@ def Simulate(data_list, precision, duration):
         np.savetxt(path, frames[body], delimiter=",")
 
         #saving to reference data as well
-        path_reference = Path(str(CWDDIR)) / 'Reference_Data' / (str(data_list[-1]) + "_Brutus_dT_" + str(precision)) #adds info about the configuration and timestep size
-        path_reference.mkdir(parents=True, exist_ok=True)
-        path_reference = path_reference / f"body{body}.csv"
-        np.savetxt(path_reference, frames[body], delimiter=",")
+        if precision <= 0.0005:
+            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / (str(data_list[-1]) + "_IAS15_dT_" + str(precision)) #adds info about the configuration and timestep size
+            path_reference.mkdir(parents=True, exist_ok=True)
+            path_reference = path_reference / f"body{body}.csv"
+            np.savetxt(path_reference, frames[body], delimiter=",")
 
 
 

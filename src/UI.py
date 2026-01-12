@@ -166,7 +166,7 @@ class app(customtkinter.CTk):
             NUM_BODIES = len(os.listdir(get_path(-1)))
             
             #opening reference data and simulation data
-            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_Brutus_dT_" + "0.0005")
+            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_IAS15_dT_" + "0.0005")
             path_simulation = get_path(-1)
 
             # Read phase space data
@@ -490,7 +490,7 @@ class app(customtkinter.CTk):
         full = list()
 
         # lists of numerical methods
-        integrator_list = list(["leapfrog", "forwardeuler", "brutus"])
+        integrator_list = list(["leapfrog", "forwardeuler", "IAS15"])
 
         with open("Configurations/Stables.csv", "r") as presets:
             for x in presets:

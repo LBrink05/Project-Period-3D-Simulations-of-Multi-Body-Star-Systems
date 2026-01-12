@@ -160,7 +160,6 @@ class app(customtkinter.CTk):
 
             canvas.draw()
 
-
         def show_statistics(duration, precision, selection):
             #constants
             NUM_BODIES = len(os.listdir(get_path(-1)))
@@ -247,6 +246,9 @@ class app(customtkinter.CTk):
             canvas_widget2.pack(fill="both", expand=True)
             canvas2.draw()
             
+            lyapunov_exponents = data_analysis.calculate_lyapunov(simulated_data)
+            print(lyapunov_exponents)
+
             # Print summary statistics to console
             print(f"\nError Analysis Summary:")
             print(f"Total frames analyzed: {min_frames}\n")
@@ -371,7 +373,6 @@ class app(customtkinter.CTk):
         def integrator(selection):
             self.dropdown2.set(selection)
             
-
         #submit button logic, checks if variables are valid and enters them in a list
         def update():
             
@@ -636,6 +637,8 @@ class app(customtkinter.CTk):
         self.statistics_frame = customtkinter.CTkFrame(self.simtabs.tab("Simulation"), height=300)
         self.statistics_frame.grid(column=0, row=2, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
+        self.lyapunov_frame = customtkinter.CTkFrame(self.simtabs.tab("Lyapunov"), height=300)
+        self.lyapunov_frame.grid(column=0, row=2, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
         integrator("leapfrog")
         stableOrbits("Stable 1 - Equilateral Triangle")

@@ -1,5 +1,7 @@
 import csv
 import numpy as np
+import numdifftools as nd
+import lyapynov
 
 def read_phase_space(NUM_BODIES, path):
     
@@ -145,3 +147,58 @@ def calculate_max_error(errors, dt=1.0):
     max_error = finite_errors.max()
     
     return max_error
+
+def calculate_lyapunov(simulated_data):
+
+    jacobian_matrices = []
+
+    def calculate_jacobian_matrices_simple(simulated_data):
+
+        total_timesteps = len(simulated_data)
+        
+        def dynamical_system_derivatives(full_state):
+            state = full_state.reshape(num_bodies, 6)
+            pos = state[:, :3]
+            vel = state[:, 3:]
+            
+            derivatives = np.zeros_like(full_state)
+            
+            for b in range(num_bodies):
+                # Position derivatives
+                derivatives[b*6:b*6+3] = vel[b]
+                
+                # Acceleration/velocity derivatives
+                ax, ay, az = 0.0, 0.0, 0.0
+                px, py, pz = pos[b]
+                
+                for other in range(num_bodies):
+                    if other != b:
+                        rx = pos[other, 0] - px
+                        ry = pos[other, 1] - py
+                        rz = pos[other, 2] - pz
+                        
+                        r2 = rx**2 + ry**2 + rz**2 + 0.001**2
+                        r3 = r2**1.5
+                        
+                        ax += mass[other] * rx / r3
+                        ay += mass[other] * ry / r3
+                        az += mass[other] * rz / r3
+                
+                derivatives[b*6+3:b*6+6] = [ax, ay, az]
+            
+            return derivatives
+        
+        # Calculate for each time step
+        for t in range(total_timesteps):
+            current_state = simulated_data[:, t, :].flatten()
+            jac_func = nd.Jacobian(dynamical_system_derivatives)
+            J_cont = jac_func(current_state)
+            
+            # Discrete-time approximation
+            state_dim = len(current_state)
+            phi = np.eye(state_dim) + J_cont * timestep
+            jacobian_matrices.append(phi)
+        
+    return jacobian_matrices
+
+    #discrete_system = lyapynov.DiscreteDS(x0, t0, f, jac)

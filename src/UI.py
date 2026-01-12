@@ -506,17 +506,31 @@ class app(customtkinter.CTk):
 
         #Window config
         self.title("Three Body Problem Simulator")
-        self.geometry("1200x800")
+        self.geometry("1400x1000")
 
         # configure grid layout (4x4)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure((1), weight=1)
         self.grid_columnconfigure((2, 3), weight=0)
-        self.grid_rowconfigure((0,3), weight=0)
-        self.grid_rowconfigure((1,2), weight=2)
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure((1, 2, 3), weight=1)
+        #self.grid_rowconfigure((1,2), weight=2)
+
+        #tab views for simulations
+        self.simtabs = customtkinter.CTkTabview(self, width=300, height=800)
+        self.simtabs.grid(column=1, row=0, rowspan=4, columnspan=1, padx=20, pady=20, sticky="nsew")
+        self.simtabs.add("Simulation")
+        self.simtabs.add("Lyapunov")
+        self.simtabs.add("tab 3")
+        self.simtabs.tab("Simulation").grid_columnconfigure((0,1), weight=1)
+        self.simtabs.tab("Simulation").grid_rowconfigure((0,2), weight=1)
+        self.simtabs.tab("Lyapunov").grid_columnconfigure((0,1), weight=1)
+        self.simtabs.tab("Lyapunov").grid_rowconfigure((0,1,2), weight=1)
+        self.simtabs.tab("tab 3").grid_columnconfigure((0,1), weight=1)
+        self.simtabs.tab("tab 3").grid_rowconfigure((0,1,2), weight=1)
         
         #drop down for stable systems
-        self.dropbox_frame=customtkinter.CTkFrame(self)
-        self.dropbox_frame.grid(column=2, row=0, pady=20, padx=20, sticky="nsew")
+        self.dropbox_frame=customtkinter.CTkFrame(self, height=300)
+        self.dropbox_frame.grid(column=2,row=0, pady=(20,5), padx=20, sticky="nsew")
         self.dropdown1 = customtkinter.CTkOptionMenu(self.dropbox_frame, values=full, command=stableOrbits)
         self.dropdown1.pack(padx=(20,20), pady=20, side="left")
 
@@ -530,8 +544,8 @@ class app(customtkinter.CTk):
         self.button.pack(padx=20, pady=20, side="left")
 
         #tab view for the objects
-        self.variables = customtkinter.CTkTabview(self, width=250)
-        self.variables.grid(column=2, row=1, rowspan=2, padx=20, pady=(20,0), sticky="nsew")
+        self.variables = customtkinter.CTkTabview(self, width=250, height=400)
+        self.variables.grid(column=2, row=1, rowspan=2, padx=20, pady=(10,0), sticky="nsew")
         self.variables.add("Object 1")
         self.variables.add("Object 2")
         self.variables.add("Object 3")
@@ -609,11 +623,11 @@ class app(customtkinter.CTk):
         self.precisionoverride.pack(pady=20, padx=20,side="top")
 
         #frame for simulation animation
-        self.animation_frame = customtkinter.CTkFrame(self, height=500)
+        self.animation_frame = customtkinter.CTkFrame(self.simtabs.tab("Simulation"), height=500)
         self.animation_frame.grid(column=0, row=0, rowspan=2, columnspan=2, padx=20, pady=20, sticky="nsew")
 
         #frame for statistics plot
-        self.statistics_frame = customtkinter.CTkFrame(self, height=300)
+        self.statistics_frame = customtkinter.CTkFrame(self.simtabs.tab("Simulation"), height=300)
         self.statistics_frame.grid(column=0, row=2, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
 

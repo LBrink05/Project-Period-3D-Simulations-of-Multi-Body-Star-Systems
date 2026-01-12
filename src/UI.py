@@ -233,6 +233,9 @@ class app(customtkinter.CTk):
             ax2.legend(loc='upper right')
             
             plt.tight_layout()
+            dt_str = f"{precision:g}".replace(".", "p")  # 0.065 -> "0p065"
+            out = Path(str(CWDDIR)) / "Statistics" / f"{self.dropdown1.get()}_Simulated_data_dT_{dt_str}.png"
+            plt.savefig(out, dpi=300, bbox_inches="tight")
 
             # Destroy old statistics plot if it exists
             for widget in self.statistics_frame.winfo_children():

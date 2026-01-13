@@ -136,12 +136,10 @@ def calculate_max_error(errors, dt=1.0):
 
 def compute_jacobian(positions, velocities, masses, G=1.0, softening=0.001):
     """
-    Compute the Jacobian matrix of the N-body equations of motion.
-    
+    Jacobian Matrix Structure    
     J = [      0           I/m     ]
         [ dF/dq            0       ]
     
-    where q are positions and p are momenta (m*v)
     """
     num_bodies = len(masses)
     n = 3 * num_bodies  # Total position dimensions
@@ -203,31 +201,7 @@ def compute_jacobian(positions, velocities, masses, G=1.0, softening=0.001):
     return J
 
 def calculate_lyapunov_exponents(simulated_data, masses, dt, renorm_interval=10, G=1.0):
-    """
-    Calculate the full spectrum of Lyapunov exponents using QR decomposition.
     
-    Parameters:
-    -----------
-    simulated_data : list of numpy arrays
-        Phase space data for each body [x, y, z, vx, vy, vz]
-    masses : array-like
-        Masses of each body
-    dt : float
-        Timestep used in simulation
-    renorm_interval : int
-        Number of timesteps between QR renormalizations
-    G : float
-        Gravitational constant (default=1.0 for non-dimensional units)
-    
-    Returns:
-    --------
-    lyapunov_spectrum : numpy array
-        Array of Lyapunov exponents sorted in descending order
-    lyapunov_time : float
-        Lyapunov time (1/lambda_max)
-    exponents_over_time : list
-        Evolution of exponents over time for plotting
-    """
     num_bodies = len(simulated_data)
     num_frames = len(simulated_data[0])
     phase_dim = 6 * num_bodies  # Full phase space dimension

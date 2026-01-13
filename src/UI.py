@@ -1,3 +1,4 @@
+#IMPORT LIBRARIES
 import ast
 import os
 from ast import literal_eval
@@ -10,6 +11,7 @@ import datetime
 import importlib
 import time
 
+#MATPLOTLIB
 import matplotlib
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from matplotlib import colors as mcolors
@@ -19,18 +21,21 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 
+#CUSTOM MODULES
 import data_analysis
 
+#SET GUI THEME
 customtkinter.set_appearance_mode("System")
 customtkinter.set_default_color_theme("dark-blue")
 
 
-#setting cwd directory
+#SETTING CWD DIRECTORY FOR PATH FUNCTION
 CWDDIR = Path.cwd()
 
-#Startup Terminal Message
+#STARTUP TERMINAL MESSAGE
 print(" \n--Starting up 3D Multi-Body Stellar Simulator--\n")
 
+#APP
 class app(customtkinter.CTk):
     def __init__(self):
         customtkinter.CTk.__init__(self)
@@ -245,13 +250,15 @@ class app(customtkinter.CTk):
             canvas2.draw()
 
             # Print summary statistics to console
-            print(f"\nError Analysis Summary:")
+            print("\n" + "#"*60)
+            print(f"ERROR ANALYSIS: ")
+            print("#"*60 + "\n")
             print(f"Total frames analyzed: {min_frames}")
             print(f"Max Trajectory Error: {traj_max:.4e}%")
             print(f"Max Hamiltonian Error: {ham_max:.4e}%\n")
 
         def show_lyapunov_analysis():
-            """Calculate and display Lyapunov exponent analysis"""
+            
             if self.last_simulation_data is None:
                 self.lyapunov_status.configure(text="Please run a simulation first")
                 return
@@ -351,7 +358,7 @@ class app(customtkinter.CTk):
                 ax3.set_title('Phase Space Volume Preservation (Liouville\'s Theorem)', fontsize=12, fontweight='bold')
                 ax3.grid(True, alpha=0.3)
                 
-                # Add annotation about Liouville's theorem
+                # Annotation about Liouville's theorem
                 final_sum = sum_exponents[-1] if len(sum_exponents) > 0 else 0
                 ax3.text(0.02, 0.98, f'Final Σλ_i = {final_sum:.4e}\n(Should be ≈ 0 for Hamiltonian systems)',
                         transform=ax3.transAxes, fontsize=9, verticalalignment='top',
@@ -375,9 +382,9 @@ class app(customtkinter.CTk):
             canvas3.draw()
             
             # Print detailed results to console
-            print("\n" + "="*60)
+            print("\n" + "#"*60)
             print("LYAPUNOV EXPONENT ANALYSIS")
-            print("="*60)
+            print("#"*60 + "\n")
             print(f"Configuration: {self.dropdown1.get()}")
             print(f"Timestep (dt): {precision}")
             print(f"Calculation time: {calc_time:.2f} seconds")
@@ -403,7 +410,6 @@ class app(customtkinter.CTk):
                 sum_lambda = np.sum(lyapunov_spectrum)
                 print(f"\nSum of all exponents (Liouville): {sum_lambda:.6e}")
                 print(f"  (Should be ≈ 0 for Hamiltonian systems)")
-            print("="*60 + "\n")
 
         #logic for custom button
         def custom():
@@ -525,7 +531,7 @@ class app(customtkinter.CTk):
         def integrator(selection):
             self.dropdown2.set(selection)
             
-        #submit button logic, checks if variables are valid and enters them in a list
+        #submits button logic, checks if variables are valid and enters them in a list
         def update():
             
             #get time when button was pressed
@@ -696,13 +702,13 @@ class app(customtkinter.CTk):
         self.simtabs.grid(column=1, row=0, rowspan=4, columnspan=1, padx=20, pady=20, sticky="nsew")
         self.simtabs.add("Simulation")
         self.simtabs.add("Lyapunov")
-        self.simtabs.add("tab 3")
+        #self.simtabs.add("tab 3")
         self.simtabs.tab("Simulation").grid_columnconfigure((0,1), weight=1)
         self.simtabs.tab("Simulation").grid_rowconfigure((0,2), weight=1)
         self.simtabs.tab("Lyapunov").grid_columnconfigure((0,1), weight=1)
         self.simtabs.tab("Lyapunov").grid_rowconfigure((0,1,2), weight=1)
-        self.simtabs.tab("tab 3").grid_columnconfigure((0,1), weight=1)
-        self.simtabs.tab("tab 3").grid_rowconfigure((0,1,2), weight=1)
+        #self.simtabs.tab("tab 3").grid_columnconfigure((0,1), weight=1)
+        #self.simtabs.tab("tab 3").grid_rowconfigure((0,1,2), weight=1)
         
         #drop down for stable systems
         self.dropbox_frame=customtkinter.CTkFrame(self, height=300)

@@ -282,15 +282,8 @@ class app(customtkinter.CTk):
                 data_analysis.calculate_lyapunov_exponents(simulated_data, masses, dt=precision, renorm_interval=10)
             calc_time = time.time() - start_time
             
-            # Update status with results
-            if lyapunov_time == float('inf'):
-                chaos_status = "STABLE (no exponential divergence)"
-            else:
-                chaos_status = f"CHAOTIC (λ_max = {lyapunov_spectrum[0]:.4e})"
-            
-            status_text = f"Calculation Time: {calc_time:.2f}s | {chaos_status} | t_L = {lyapunov_time:.4e}"
-            self.lyapunov_status.configure(text=status_text)
-            
+            self.lyapunov_status.pack_forget()
+
             # Create visualization
             fig3 = plt.figure(figsize=(12, 10))
             
@@ -326,43 +319,43 @@ class app(customtkinter.CTk):
                         transform=ax1.transAxes, fontsize=10, verticalalignment='top',
                         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
             
-            # Plot 2: Evolution of top 5 exponents over time
+            # Plot 2: Evolution of top 6 exponents over renormalization steps
             ax2 = plt.subplot(3, 1, 2)
             if len(exponents_over_time) > 0 and len(time_points) > 0:
                 exponents_array = np.array(exponents_over_time)
-                num_to_plot = min(5, exponents_array.shape[1])
-                
-                for i in range(num_to_plot):
-                    color = 'red' if lyapunov_spectrum[i] > 0 else 'blue'
-                    ax2.plot(time_points, exponents_array[:, i], 
-                            label=f'λ_{i+1} = {lyapunov_spectrum[i]:.3e}',
-                            linewidth=2, color=color, alpha=0.7)
-                
+                # Get indices of top 3 (most positive) and bottom 3 (most negative)
+                top_3_indices = list(range(3))
+                bottom_3_indices = list(range(len(lyapunov_spectrum) - 3, len(lyapunov_spectrum)))
+                indices_to_plot = top_3_indices + bottom_3_indices
+                # Distinct colors for each exponent
+                exponent_colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#a65628']
+                for idx, i in enumerate(indices_to_plot):
+                    ax2.scatter(time_points, exponents_array[:, i], 
+                                label=f'{dimension_labels_sorted[i]}: {lyapunov_spectrum[i]:.3e}',
+                                s=50, color=exponent_colors[idx], alpha=0.8)
                 ax2.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
-                ax2.set_xlabel('Time', fontsize=11)
+                ax2.set_xlabel('Renormalization Steps', fontsize=11)
                 ax2.set_ylabel('Lyapunov Exponent', fontsize=11)
-                ax2.set_title('Evolution of Top 5 Lyapunov Exponents', fontsize=12, fontweight='bold')
+                ax2.set_title('Evolution of Top 6 Lyapunov Exponents (by magnitude)', fontsize=12, fontweight='bold')
                 ax2.legend(loc='best', fontsize=9)
                 ax2.grid(True, alpha=0.3)
-            
+
             # Plot 3: Phase space volume preservation (sum of exponents)
             ax3 = plt.subplot(3, 1, 3)
             if len(exponents_over_time) > 0:
                 exponents_array = np.array(exponents_over_time)
                 sum_exponents = np.sum(exponents_array, axis=1)
-                
-                ax3.plot(time_points, sum_exponents, linewidth=2, color='green', label='Σλ_i')
+                ax3.scatter(time_points, sum_exponents, s=50, color='green', label='Σλ_i')
                 ax3.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
-                ax3.set_xlabel('Time', fontsize=11)
+                ax3.set_xlabel('Renormalization Steps', fontsize=11)
                 ax3.set_ylabel('Sum of Exponents', fontsize=11)
                 ax3.set_title('Phase Space Volume Preservation (Liouville\'s Theorem)', fontsize=12, fontweight='bold')
                 ax3.grid(True, alpha=0.3)
-                
                 # Annotation about Liouville's theorem
                 final_sum = sum_exponents[-1] if len(sum_exponents) > 0 else 0
                 ax3.text(0.02, 0.98, f'Final Σλ_i = {final_sum:.4e}\n(Should be ≈ 0 for Hamiltonian systems)',
-                        transform=ax3.transAxes, fontsize=9, verticalalignment='top',
-                        bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
+            transform=ax3.transAxes, fontsize=9, verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
             
             plt.tight_layout()
             
@@ -401,10 +394,6 @@ class app(customtkinter.CTk):
             print(f"\nNumber of positive exponents: {np.sum(lyapunov_spectrum > 0)}")
             print(f"Number of negative exponents: {np.sum(lyapunov_spectrum < 0)}")
             print(f"Number of near-zero exponents: {np.sum(np.abs(lyapunov_spectrum) < 1e-6)}")
-            
-            print(f"\nTop 5 Lyapunov Exponents:")
-            for i in range(min(5, len(lyapunov_spectrum))):
-                print(f"  λ_{i+1} = {lyapunov_spectrum[i]:.6e}")
             
             if len(lyapunov_spectrum) > 0:
                 sum_lambda = np.sum(lyapunov_spectrum)
@@ -706,7 +695,8 @@ class app(customtkinter.CTk):
         self.simtabs.tab("Simulation").grid_columnconfigure((0,1), weight=1)
         self.simtabs.tab("Simulation").grid_rowconfigure((0,2), weight=1)
         self.simtabs.tab("Lyapunov").grid_columnconfigure((0,1), weight=1)
-        self.simtabs.tab("Lyapunov").grid_rowconfigure((0,1,2), weight=1)
+        self.simtabs.tab("Lyapunov").grid_rowconfigure(0, weight=0)  # Control frame - fixed height
+        self.simtabs.tab("Lyapunov").grid_rowconfigure(1, weight=1)  # Plot frame - expandable
         #self.simtabs.tab("tab 3").grid_columnconfigure((0,1), weight=1)
         #self.simtabs.tab("tab 3").grid_rowconfigure((0,1,2), weight=1)
         
@@ -812,9 +802,10 @@ class app(customtkinter.CTk):
         self.statistics_frame = customtkinter.CTkFrame(self.simtabs.tab("Simulation"), height=300)
         self.statistics_frame.grid(column=0, row=2, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
-        # Lyapunov tab setup
-        self.lyapunov_control_frame = customtkinter.CTkFrame(self.simtabs.tab("Lyapunov"), height=80)
-        self.lyapunov_control_frame.grid(column=0, row=0, columnspan=2, padx=20, pady=(20,10), sticky="nsew")
+        # Lyapunov tab setup - control frame with fixed height
+        self.lyapunov_control_frame = customtkinter.CTkFrame(self.simtabs.tab("Lyapunov"), height=100)
+        self.lyapunov_control_frame.grid(column=0, row=0, columnspan=2, padx=20, pady=(20,10), sticky="ew")
+        self.lyapunov_control_frame.grid_propagate(False)  # Prevent frame from shrinking
         
         self.lyapunov_button = customtkinter.CTkButton(self.lyapunov_control_frame, text="Calculate Lyapunov Exponents", 
                                                        command=show_lyapunov_analysis, height=40, font=("Arial", 14, "bold"))
@@ -824,8 +815,9 @@ class app(customtkinter.CTk):
                                                       font=("Arial", 11))
         self.lyapunov_status.pack(pady=(0,10))
         
+        # Lyapunov plot frame - expandable
         self.lyapunov_frame = customtkinter.CTkFrame(self.simtabs.tab("Lyapunov"), height=600)
-        self.lyapunov_frame.grid(column=0, row=1, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
+        self.lyapunov_frame.grid(column=0, row=1, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
         integrator("leapfrog")
         stableOrbits("Stable 1 - Equilateral Triangle")

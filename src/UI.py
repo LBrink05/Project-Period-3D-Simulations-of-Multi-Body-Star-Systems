@@ -91,6 +91,18 @@ class app(customtkinter.CTk):
                 path = get_path(body)
                 frames[body] = np.genfromtxt(path, delimiter=',')[:, :3]
 
+            #eps = softening, must match the softening used by the integrator)
+            def hamiltionian(pos, vel, m, eps=0.001):
+                K = 0.5 * np.sum(m * np.sum(vel * vel, axis=1))
+
+                U = 0.0
+                for i in range(3):
+                    for j in range(i+1, 3):
+                        dr=pos[j]-pos[i]
+                        r2 = float(dr[0]*dr[0]+dr[1]*dr[1]+dr[2]*dr[2])
+                        U += - (m[i] * m[j] / np.sqrt(r2 + eps*eps))
+                return K + U
+
             # plotting the data
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
@@ -554,7 +566,17 @@ class app(customtkinter.CTk):
                 masses = [stables[num][1], stables[num][4], stables[num][7]]
             else:
                 masses = [customs[num][1], customs[num][4], customs[num][7]]
-            
+
+            # Store simulation data for Lyapunov analysis
+            NUM_BODIES = 3
+            self.last_simulation_data = {
+                'num_bodies': NUM_BODIES,
+                'masses': masses,
+                'precision': precision,
+                'duration': int(self.durationVariable.get()),
+                'selection': selection
+            }
+
             if self.var1.get() == 1:
                 if self.position1.get()[0]!="(" or self.position2.get()[0]!="(" or self.position3.get()[0]!="(" or self.position1.get()[-1]!=")" or self.position2.get()[-1]!=")" or self.position3.get()[-1]!=")" or self.velocity1.get()[0]!="(" or self.velocity2.get()[0]!="(" or self.velocity3.get()[0]!="(" or self.velocity1.get()[-1]!=")" or self.velocity2.get()[-1]!=")" or self.velocity3.get()[-1]!=")":
                     self.textfield.configure(text="Please include AND close brackets for position and velocity")
@@ -576,15 +598,7 @@ class app(customtkinter.CTk):
             time_elapsed = rendering_time -  submission_time
             print("Processing time of simulation: " + str(time_elapsed) + "\n")
             
-            # Store simulation data for Lyapunov analysis
-            NUM_BODIES = 3
-            self.last_simulation_data = {
-                'num_bodies': NUM_BODIES,
-                'masses': masses,
-                'precision': precision,
-                'duration': int(self.durationVariable.get()),
-                'selection': selection
-            }
+
 
             show_statistics(int(self.durationVariable.get()), precision, selection)
 

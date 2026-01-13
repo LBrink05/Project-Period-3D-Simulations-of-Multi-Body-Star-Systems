@@ -8,6 +8,7 @@ from pathlib import Path
 import re 
 import datetime
 import importlib
+import time
 
 import matplotlib
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -37,6 +38,7 @@ class app(customtkinter.CTk):
         self.popup = None
         self.anim = None
         self.current_fig = None
+        self.last_simulation_data = None  # Store last simulation info
         
         # Define all your functions INSIDE __init__ first
         def on_closing():
@@ -203,11 +205,6 @@ class app(customtkinter.CTk):
             traj_max = data_analysis.calculate_max_error(trajectory_errors, dt=1.0/24.0)
             ham_max = data_analysis.calculate_max_error(hamiltonian_errors, dt=1.0/24.0)
 
-            print(f"DEBUG: traj_max = {traj_max}, type = {type(traj_max)}")
-            print(f"DEBUG: ham_max = {ham_max}, type = {type(ham_max)}")
-            print(f"DEBUG: Formatted traj_max = {traj_max:.4f}")
-            print(f"DEBUG: Formatted ham_max = {ham_max:.4f}")
-
             # Create plot with two subplots
             fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
             
@@ -234,6 +231,7 @@ class app(customtkinter.CTk):
             plt.tight_layout()
             dt_str = f"{precision:g}".replace(".", "p")  # 0.065 -> "0p065"
             out = Path(str(CWDDIR)) / "Statistics" / f"{self.dropdown1.get()}_Simulated_data_dT_{dt_str}.png"
+            out.parent.mkdir(parents=True, exist_ok=True)
             plt.savefig(out, dpi=300, bbox_inches="tight")
 
             # Destroy old statistics plot if it exists
@@ -245,13 +243,167 @@ class app(customtkinter.CTk):
             canvas_widget2 = canvas2.get_tk_widget()
             canvas_widget2.pack(fill="both", expand=True)
             canvas2.draw()
-            
-            lyapunov_exponents = data_analysis.calculate_lyapunov(simulated_data)
-            print(lyapunov_exponents)
 
             # Print summary statistics to console
             print(f"\nError Analysis Summary:")
-            print(f"Total frames analyzed: {min_frames}\n")
+            print(f"Total frames analyzed: {min_frames}")
+            print(f"Max Trajectory Error: {traj_max:.4e}%")
+            print(f"Max Hamiltonian Error: {ham_max:.4e}%\n")
+
+        def show_lyapunov_analysis():
+            """Calculate and display Lyapunov exponent analysis"""
+            if self.last_simulation_data is None:
+                self.lyapunov_status.configure(text="Please run a simulation first")
+                return
+            
+            # Update status
+            self.lyapunov_status.configure(text="Calculating Lyapunov exponents...")
+            self.update()
+            
+            # Extract simulation parameters
+            NUM_BODIES = self.last_simulation_data['num_bodies']
+            masses = self.last_simulation_data['masses']
+            precision = self.last_simulation_data['precision']
+            
+            # Read simulated data
+            path_simulation = get_path(-1)
+            simulated_data = data_analysis.read_phase_space(NUM_BODIES, path_simulation)
+            
+            # Calculate Lyapunov exponents
+            start_time = time.time()
+            lyapunov_spectrum, lyapunov_time, exponents_over_time, time_points, sorted_indices = \
+                data_analysis.calculate_lyapunov_exponents(simulated_data, masses, dt=precision, renorm_interval=10)
+            calc_time = time.time() - start_time
+            
+            # Update status with results
+            if lyapunov_time == float('inf'):
+                chaos_status = "STABLE (no exponential divergence)"
+            else:
+                chaos_status = f"CHAOTIC (λ_max = {lyapunov_spectrum[0]:.4e})"
+            
+            status_text = f"Calculation Time: {calc_time:.2f}s | {chaos_status} | t_L = {lyapunov_time:.4e}"
+            self.lyapunov_status.configure(text=status_text)
+            
+            # Create visualization
+            fig3 = plt.figure(figsize=(12, 10))
+            
+            # Plot 1: Full Lyapunov Spectrum (bar plot)
+            ax1 = plt.subplot(3, 1, 1)
+            indices = np.arange(len(lyapunov_spectrum))
+            colors_spectrum = ['red' if x > 0 else 'blue' if x < 0 else 'gray' for x in lyapunov_spectrum]
+            ax1.bar(indices, lyapunov_spectrum, color=colors_spectrum, alpha=0.7, edgecolor='black')
+            ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
+            
+            # Create dimension labels for x-axis based on original (unsorted) indices
+            # For 3 bodies: x1,y1,z1,vx1,vy1,vz1, x2,y2,z2,vx2,vy2,vz2, x3,y3,z3,vx3,vy3,vz3
+            all_dimension_labels = []
+            coord_names = ['x', 'y', 'z', 'vx', 'vy', 'vz']
+            for body in range(1, NUM_BODIES + 1):
+                for coord in coord_names:
+                    all_dimension_labels.append(f'{coord}{body}')
+            
+            # Map sorted indices to their original dimension labels
+            dimension_labels_sorted = [all_dimension_labels[idx] for idx in sorted_indices]
+            
+            # Set x-axis with dimension labels
+            ax1.set_xticks(indices)
+            ax1.set_xticklabels(dimension_labels_sorted, rotation=45, ha='right', fontsize=8)
+            ax1.set_xlabel('Phase Space Dimension (sorted by λ value)', fontsize=11)
+            ax1.set_ylabel('Lyapunov Exponent λ_i', fontsize=11)
+            ax1.set_title('Full Lyapunov Spectrum (sorted descending)', fontsize=12, fontweight='bold')
+            ax1.grid(True, alpha=0.3, axis='y')
+            
+            # Add text annotation for max exponent
+            if len(lyapunov_spectrum) > 0:
+                ax1.text(0.02, 0.98, f'λ_max = {lyapunov_spectrum[0]:.4e} ({dimension_labels_sorted[0]})\nt_L = {lyapunov_time:.4e}',
+                        transform=ax1.transAxes, fontsize=10, verticalalignment='top',
+                        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+            
+            # Plot 2: Evolution of top 5 exponents over time
+            ax2 = plt.subplot(3, 1, 2)
+            if len(exponents_over_time) > 0 and len(time_points) > 0:
+                exponents_array = np.array(exponents_over_time)
+                num_to_plot = min(5, exponents_array.shape[1])
+                
+                for i in range(num_to_plot):
+                    color = 'red' if lyapunov_spectrum[i] > 0 else 'blue'
+                    ax2.plot(time_points, exponents_array[:, i], 
+                            label=f'λ_{i+1} = {lyapunov_spectrum[i]:.3e}',
+                            linewidth=2, color=color, alpha=0.7)
+                
+                ax2.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
+                ax2.set_xlabel('Time', fontsize=11)
+                ax2.set_ylabel('Lyapunov Exponent', fontsize=11)
+                ax2.set_title('Evolution of Top 5 Lyapunov Exponents', fontsize=12, fontweight='bold')
+                ax2.legend(loc='best', fontsize=9)
+                ax2.grid(True, alpha=0.3)
+            
+            # Plot 3: Phase space volume preservation (sum of exponents)
+            ax3 = plt.subplot(3, 1, 3)
+            if len(exponents_over_time) > 0:
+                exponents_array = np.array(exponents_over_time)
+                sum_exponents = np.sum(exponents_array, axis=1)
+                
+                ax3.plot(time_points, sum_exponents, linewidth=2, color='green', label='Σλ_i')
+                ax3.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
+                ax3.set_xlabel('Time', fontsize=11)
+                ax3.set_ylabel('Sum of Exponents', fontsize=11)
+                ax3.set_title('Phase Space Volume Preservation (Liouville\'s Theorem)', fontsize=12, fontweight='bold')
+                ax3.grid(True, alpha=0.3)
+                
+                # Add annotation about Liouville's theorem
+                final_sum = sum_exponents[-1] if len(sum_exponents) > 0 else 0
+                ax3.text(0.02, 0.98, f'Final Σλ_i = {final_sum:.4e}\n(Should be ≈ 0 for Hamiltonian systems)',
+                        transform=ax3.transAxes, fontsize=9, verticalalignment='top',
+                        bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
+            
+            plt.tight_layout()
+            
+            # Save figure
+            dt_str = f"{precision:g}".replace(".", "p")
+            out = Path(str(CWDDIR)) / "Statistics" / f"{self.dropdown1.get()}_Lyapunov_dT_{dt_str}.png"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            plt.savefig(out, dpi=300, bbox_inches="tight")
+            
+            # Clear old plot and display new one
+            for widget in self.lyapunov_frame.winfo_children():
+                widget.destroy()
+            
+            canvas3 = FigureCanvasTkAgg(fig3, self.lyapunov_frame)
+            canvas_widget3 = canvas3.get_tk_widget()
+            canvas_widget3.pack(fill="both", expand=True)
+            canvas3.draw()
+            
+            # Print detailed results to console
+            print("\n" + "="*60)
+            print("LYAPUNOV EXPONENT ANALYSIS")
+            print("="*60)
+            print(f"Configuration: {self.dropdown1.get()}")
+            print(f"Timestep (dt): {precision}")
+            print(f"Calculation time: {calc_time:.2f} seconds")
+            print(f"\nMaximum Lyapunov Exponent: {lyapunov_spectrum[0]:.6e}")
+            print(f"Lyapunov Time (t_L = 1/λ_max): {lyapunov_time:.6e}")
+            
+            if lyapunov_spectrum[0] > 1e-6:
+                print(f"\nSystem is CHAOTIC (λ_max > 0)")
+            elif lyapunov_spectrum[0] > -1e-6:
+                print(f"\nSystem is MARGINALLY STABLE (λ_max ≈ 0)")
+            else:
+                print(f"\nSystem is STABLE (λ_max < 0)")
+            
+            print(f"\nNumber of positive exponents: {np.sum(lyapunov_spectrum > 0)}")
+            print(f"Number of negative exponents: {np.sum(lyapunov_spectrum < 0)}")
+            print(f"Number of near-zero exponents: {np.sum(np.abs(lyapunov_spectrum) < 1e-6)}")
+            
+            print(f"\nTop 5 Lyapunov Exponents:")
+            for i in range(min(5, len(lyapunov_spectrum))):
+                print(f"  λ_{i+1} = {lyapunov_spectrum[i]:.6e}")
+            
+            if len(lyapunov_spectrum) > 0:
+                sum_lambda = np.sum(lyapunov_spectrum)
+                print(f"\nSum of all exponents (Liouville): {sum_lambda:.6e}")
+                print(f"  (Should be ≈ 0 for Hamiltonian systems)")
+            print("="*60 + "\n")
 
         #logic for custom button
         def custom():
@@ -390,12 +542,20 @@ class app(customtkinter.CTk):
                 precision = round(self.precision.get(), 4)
             elif self.var2.get() == 1:
                 precision = float(self.precisionoverride.get())
+            
+            # Extract masses for storage
+            if selection.startswith('S'):
+                masses = [stables[num][1], stables[num][4], stables[num][7]]
+            else:
+                masses = [customs[num][1], customs[num][4], customs[num][7]]
+            
             if self.var1.get() == 1:
                 if self.position1.get()[0]!="(" or self.position2.get()[0]!="(" or self.position3.get()[0]!="(" or self.position1.get()[-1]!=")" or self.position2.get()[-1]!=")" or self.position3.get()[-1]!=")" or self.velocity1.get()[0]!="(" or self.velocity2.get()[0]!="(" or self.velocity3.get()[0]!="(" or self.velocity1.get()[-1]!=")" or self.velocity2.get()[-1]!=")" or self.velocity3.get()[-1]!=")":
                     self.textfield.configure(text="Please include AND close brackets for position and velocity")
                     return
                 else:
                     customData = list((eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get())))
+                    masses = [customData[1], customData[4], customData[7]]
                     integrator_selection.Simulate(customData, precision, int(self.durationVariable.get()))
                     show_animation(int(self.durationVariable.get()))
             else:
@@ -409,6 +569,16 @@ class app(customtkinter.CTk):
             rendering_time = datetime.datetime.now()
             time_elapsed = rendering_time -  submission_time
             print("Processing time of simulation: " + str(time_elapsed) + "\n")
+            
+            # Store simulation data for Lyapunov analysis
+            NUM_BODIES = 3
+            self.last_simulation_data = {
+                'num_bodies': NUM_BODIES,
+                'masses': masses,
+                'precision': precision,
+                'duration': int(self.durationVariable.get()),
+                'selection': selection
+            }
 
             show_statistics(int(self.durationVariable.get()), precision, selection)
 
@@ -520,7 +690,6 @@ class app(customtkinter.CTk):
         self.grid_columnconfigure((2, 3), weight=0)
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure((1, 2, 3), weight=1)
-        #self.grid_rowconfigure((1,2), weight=2)
 
         #tab views for simulations
         self.simtabs = customtkinter.CTkTabview(self, width=300, height=800)
@@ -637,8 +806,20 @@ class app(customtkinter.CTk):
         self.statistics_frame = customtkinter.CTkFrame(self.simtabs.tab("Simulation"), height=300)
         self.statistics_frame.grid(column=0, row=2, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
-        self.lyapunov_frame = customtkinter.CTkFrame(self.simtabs.tab("Lyapunov"), height=300)
-        self.lyapunov_frame.grid(column=0, row=2, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
+        # Lyapunov tab setup
+        self.lyapunov_control_frame = customtkinter.CTkFrame(self.simtabs.tab("Lyapunov"), height=80)
+        self.lyapunov_control_frame.grid(column=0, row=0, columnspan=2, padx=20, pady=(20,10), sticky="nsew")
+        
+        self.lyapunov_button = customtkinter.CTkButton(self.lyapunov_control_frame, text="Calculate Lyapunov Exponents", 
+                                                       command=show_lyapunov_analysis, height=40, font=("Arial", 14, "bold"))
+        self.lyapunov_button.pack(pady=15, padx=20)
+        
+        self.lyapunov_status = customtkinter.CTkLabel(self.lyapunov_control_frame, text="Run a simulation first, then click to analyze", 
+                                                      font=("Arial", 11))
+        self.lyapunov_status.pack(pady=(0,10))
+        
+        self.lyapunov_frame = customtkinter.CTkFrame(self.simtabs.tab("Lyapunov"), height=600)
+        self.lyapunov_frame.grid(column=0, row=1, rowspan=2, columnspan=2, padx=20, pady=(0,20), sticky="nsew")
 
         integrator("leapfrog")
         stableOrbits("Stable 1 - Equilateral Triangle")

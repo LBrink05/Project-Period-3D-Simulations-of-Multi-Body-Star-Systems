@@ -1,7 +1,6 @@
 import csv
 import numpy as np
-import numdifftools as nd
-import lyapynov
+from scipy.linalg import qr
 
 def read_phase_space(NUM_BODIES, path):
     
@@ -123,19 +122,6 @@ def error_function(reference_data, simulated_data, masses):
     
     return error_at_time
 
-'''def calculate_rms_error(errors, dt=1.0):
-    errors_array = np.array(errors)
-    # Filter out infinite values
-    finite_errors = errors_array[np.isfinite(errors_array)]
-    
-    if len(finite_errors) == 0:
-        return float('inf')
-    
-    T = len(finite_errors) * dt
-    sum_squared = np.sum(finite_errors**2) * dt
-    
-    return np.sqrt(sum_squared / T)'''
-
 def calculate_max_error(errors, dt=1.0):
     errors_array = np.array(errors)
     # Filter out infinite values
@@ -148,57 +134,164 @@ def calculate_max_error(errors, dt=1.0):
     
     return max_error
 
-def calculate_lyapunov(simulated_data):
-
-    jacobian_matrices = []
-
-    def calculate_jacobian_matrices_simple(simulated_data):
-
-        total_timesteps = len(simulated_data)
-        
-        def dynamical_system_derivatives(full_state):
-            state = full_state.reshape(num_bodies, 6)
-            pos = state[:, :3]
-            vel = state[:, 3:]
-            
-            derivatives = np.zeros_like(full_state)
-            
-            for b in range(num_bodies):
-                # Position derivatives
-                derivatives[b*6:b*6+3] = vel[b]
-                
-                # Acceleration/velocity derivatives
-                ax, ay, az = 0.0, 0.0, 0.0
-                px, py, pz = pos[b]
-                
-                for other in range(num_bodies):
-                    if other != b:
-                        rx = pos[other, 0] - px
-                        ry = pos[other, 1] - py
-                        rz = pos[other, 2] - pz
+def compute_jacobian(positions, velocities, masses, G=1.0, softening=0.001):
+    """
+    Compute the Jacobian matrix of the N-body equations of motion.
+    
+    J = [      0           I/m     ]
+        [ dF/dq            0       ]
+    
+    where q are positions and p are momenta (m*v)
+    """
+    num_bodies = len(masses)
+    n = 3 * num_bodies  # Total position dimensions
+    
+    # Initialize Jacobian as 6N x 6N matrix
+    J = np.zeros((2*n, 2*n))
+    
+    # Upper right block: dv/dp = I/m
+    for i in range(num_bodies):
+        for j in range(3):
+            idx = 3*i + j
+            J[idx, n + idx] = 1.0 / masses[i]
+    
+    # Lower left block: dF/dq (force derivatives w.r.t. positions)
+    for i in range(num_bodies):
+        for j in range(num_bodies):
+            if i == j:
+                # Diagonal terms: sum of interactions with all other bodies
+                for k in range(num_bodies):
+                    if k != i:
+                        r_vec = positions[k] - positions[i]
+                        r = np.linalg.norm(r_vec)
+                        r_soft = np.sqrt(r**2 + softening**2)
                         
-                        r2 = rx**2 + ry**2 + rz**2 + 0.001**2
-                        r3 = r2**1.5
-                        
-                        ax += mass[other] * rx / r3
-                        ay += mass[other] * ry / r3
-                        az += mass[other] * rz / r3
+                        # d(F_i)/d(q_i) contribution from body k
+                        for alpha in range(3):
+                            for beta in range(3):
+                                idx_row = n + 3*i + alpha
+                                idx_col = 3*i + beta
+                                
+                                if alpha == beta:
+                                    J[idx_row, idx_col] -= G * masses[k] * (
+                                        1.0 / r_soft**3 - 3.0 * r_vec[alpha]**2 / r_soft**5
+                                    )
+                                else:
+                                    J[idx_row, idx_col] -= G * masses[k] * (
+                                        -3.0 * r_vec[alpha] * r_vec[beta] / r_soft**5
+                                    )
+            else:
+                # Off-diagonal terms: direct interaction between i and j
+                r_vec = positions[j] - positions[i]
+                r = np.linalg.norm(r_vec)
+                r_soft = np.sqrt(r**2 + softening**2)
                 
-                derivatives[b*6+3:b*6+6] = [ax, ay, az]
-            
-            return derivatives
-        
-        # Calculate for each time step
-        for t in range(total_timesteps):
-            current_state = simulated_data[:, t, :].flatten()
-            jac_func = nd.Jacobian(dynamical_system_derivatives)
-            J_cont = jac_func(current_state)
-            
-            # Discrete-time approximation
-            state_dim = len(current_state)
-            phi = np.eye(state_dim) + J_cont * timestep
-            jacobian_matrices.append(phi)
-        
-    return jacobian_matrices
+                for alpha in range(3):
+                    for beta in range(3):
+                        idx_row = n + 3*i + alpha
+                        idx_col = 3*j + beta
+                        
+                        if alpha == beta:
+                            J[idx_row, idx_col] = G * masses[j] * (
+                                1.0 / r_soft**3 - 3.0 * r_vec[alpha]**2 / r_soft**5
+                            )
+                        else:
+                            J[idx_row, idx_col] = G * masses[j] * (
+                                -3.0 * r_vec[alpha] * r_vec[beta] / r_soft**5
+                            )
+    
+    return J
 
-    #discrete_system = lyapynov.DiscreteDS(x0, t0, f, jac)
+def calculate_lyapunov_exponents(simulated_data, masses, dt, renorm_interval=10, G=1.0):
+    """
+    Calculate the full spectrum of Lyapunov exponents using QR decomposition.
+    
+    Parameters:
+    -----------
+    simulated_data : list of numpy arrays
+        Phase space data for each body [x, y, z, vx, vy, vz]
+    masses : array-like
+        Masses of each body
+    dt : float
+        Timestep used in simulation
+    renorm_interval : int
+        Number of timesteps between QR renormalizations
+    G : float
+        Gravitational constant (default=1.0 for non-dimensional units)
+    
+    Returns:
+    --------
+    lyapunov_spectrum : numpy array
+        Array of Lyapunov exponents sorted in descending order
+    lyapunov_time : float
+        Lyapunov time (1/lambda_max)
+    exponents_over_time : list
+        Evolution of exponents over time for plotting
+    """
+    num_bodies = len(simulated_data)
+    num_frames = len(simulated_data[0])
+    phase_dim = 6 * num_bodies  # Full phase space dimension
+    
+    # Initialize perturbation matrix as identity
+    V = np.eye(phase_dim)
+    
+    # Running sum of logarithms for each exponent
+    S = np.zeros(phase_dim)
+    
+    # Store exponents over time for visualization
+    exponents_over_time = []
+    time_points = []
+    
+    renorm_count = 0
+    
+    for frame_idx in range(1, num_frames):
+        # Extract current state
+        positions = np.array([simulated_data[b][frame_idx][:3] for b in range(num_bodies)])
+        velocities = np.array([simulated_data[b][frame_idx][3:6] for b in range(num_bodies)])
+        
+        # Compute Jacobian at current state
+        J = compute_jacobian(positions, velocities, masses, G)
+        
+        # Evolve perturbation vectors: V_new = (I + J*dt) * V
+        V = V + dt * (J @ V)
+        
+        # Perform QR decomposition at renormalization intervals
+        if (frame_idx % renorm_interval) == 0:
+            Q, R = qr(V)
+            
+            # Accumulate logarithms of diagonal elements
+            for i in range(phase_dim):
+                if R[i, i] > 0:
+                    S[i] += np.log(abs(R[i, i]))
+            
+            renorm_count += 1
+            
+            # Reset V to orthonormal Q
+            V = Q
+            
+            # Calculate current exponents and store
+            if renorm_count > 0:
+                current_time = frame_idx * dt
+                current_exponents = S / current_time
+                exponents_over_time.append(current_exponents.copy())
+                time_points.append(current_time)
+    
+    # Final Lyapunov exponents
+    total_time = (num_frames - 1) * dt
+    if total_time > 0:
+        lyapunov_spectrum = S / total_time
+    else:
+        lyapunov_spectrum = np.zeros(phase_dim)
+    
+    # Sort in descending order and keep track of original indices
+    sorted_indices = np.argsort(lyapunov_spectrum)[::-1]
+    lyapunov_spectrum_sorted = lyapunov_spectrum[sorted_indices]
+    
+    # Calculate Lyapunov time from maximum exponent
+    lambda_max = lyapunov_spectrum_sorted[0]
+    if lambda_max > 0:
+        lyapunov_time = 1.0 / lambda_max
+    else:
+        lyapunov_time = float('inf')
+    
+    return lyapunov_spectrum_sorted, lyapunov_time, exponents_over_time, time_points, sorted_indices

@@ -175,6 +175,17 @@ class app(customtkinter.CTk):
             path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_IAS15_dT_" + "0.0005")
             path_simulation = get_path(-1)
 
+             # Check if reference data exists
+            if not path_reference.exists():
+                print("\n" + "#"*60)
+                print("ERROR: Reference data not found!")
+                print("#"*60)
+                print(f"\nMissing: {path_reference}")
+                print("\nPlease run the IAS15 reference simulation first before")
+                print("comparing results. Select IAS15 as the integrator and")
+                print("run a simulation with precision 0.0005 to generate reference data.")
+                return
+
             # Read phase space data
             reference_data = data_analysis.read_phase_space(NUM_BODIES, path_reference)
             simulated_data = data_analysis.read_phase_space(NUM_BODIES, path_simulation)

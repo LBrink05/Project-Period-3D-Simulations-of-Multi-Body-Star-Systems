@@ -1,6 +1,7 @@
 env/
 Simulated_Data/
 Reference_Data/
+Statistics/
 __pycache__/
 *.pyc
 *.pyo

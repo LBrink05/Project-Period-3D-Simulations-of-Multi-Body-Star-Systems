@@ -667,7 +667,7 @@ class app(customtkinter.CTk):
         full = list()
 
         # lists of numerical methods
-        integrator_list = list(["leapfrog", "forwardeuler", "IAS15"])
+        integrator_list = list(["leapfrog", "forwardeuler", "IAS15", "Adaptive_leapfrog"])
 
         with open("Configurations/Stables.csv", "r") as presets:
             for x in presets:

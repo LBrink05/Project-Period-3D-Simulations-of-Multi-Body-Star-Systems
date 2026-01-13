@@ -23,13 +23,17 @@ def Simulate(data_list, precision, duration):
         [data_list[8][0], data_list[8][1], data_list[8][2]],
     ], dtype=np.float64)
 
-    timestep = float(precision)
-    total_steps = int(duration * 24 / timestep) + 1  # include t=0
+    tend = float(duration) * 24.0
 
-    sample_every = max(1, int(1 / timestep))
-    out_steps = (total_steps - 1) // sample_every + 1
+    out_dt = 1.0
 
-    frames = position_sampled(timestep, total_steps, sample_every, out_steps, NUM_BODIES, start_pos, start_vel, mass)
+    dt_max = float(precision)
+
+    dt_min = dt_max/200.0
+
+    eta = 0.01
+
+    frames = position_adaptive(tend, out_dt, NUM_BODIES, start_pos, start_vel, mass, eta, dt_min, dt_max)
 
     # save CSV files
     out_dir = Path(str(CWDDIR)) / "Simulated_Data"
@@ -113,12 +117,13 @@ def adaptive_leapfrog_inplace(MASS, TIMESTEP, NUM_BODIES, prior_pos, prior_vel, 
 
 
 @njit
-def position_sampled(TIMESTEP, TOTAL_STEPS, SAMPLE_EVERY, OUT_STEPS, NUM_BODIES, START_POS, START_VEL, MASS):
+def position_adaptive(tend, out_dt, NUM_BODIES, START_POS, START_VEL, MASS, eta, dt_min, dt_max):
     """
     Runs the integrator for TOTAL_STEPS and stores only every SAMPLE_EVERY step.
     Returns frames shaped (NUM_BODIES, OUT_STEPS, 6) with [x,y,z,vx,vy,vz].
     """
-    frames = np.zeros((NUM_BODIES, OUT_STEPS, 6), dtype=np.float64)
+    max_out = int(tend * out_dt)
+    frames = np.zeros((NUM_BODIES, max_out, 6), dtype=np.float64)
 
     prior_pos = START_POS.copy()
     prior_vel = START_VEL.copy()
@@ -137,12 +142,33 @@ def position_sampled(TIMESTEP, TOTAL_STEPS, SAMPLE_EVERY, OUT_STEPS, NUM_BODIES,
         frames[b, out_i, 5] = prior_vel[b, 2]
 
     out_i += 1
+    t = 0
+    next_out = out_dt
 
-    for t in range(1, TOTAL_STEPS):
+    Mtot = MASS[0]+MASS[1]+MASS[2]
 
-        adaptive_leapfrog_inplace(MASS, TIMESTEP, NUM_BODIES, prior_pos, prior_vel, acc, acc_new)
+    while t < tend:
+        rmin = min_pair_distance(prior_pos)
 
-        if t % SAMPLE_EVERY == 0:
+        dt = eta * ((rmin ** 3)/Mtot) ** 0.5
+
+        if dt < dt_min:
+            dt = dt_min
+        elif dt > dt_max:
+            dt = dt_max
+
+        if t + dt > tend:
+            dt = tend - t
+
+        if t + dt > next_out:
+            dt = next_out - t
+
+
+        adaptive_leapfrog_inplace(MASS, dt, NUM_BODIES, prior_pos, prior_vel, acc, acc_new)
+        t += dt
+
+
+        if t >= next_out - 1e-15:
             for b in range(NUM_BODIES):
                 frames[b, out_i, 0] = prior_pos[b, 0]
                 frames[b, out_i, 1] = prior_pos[b, 1]
@@ -151,31 +177,32 @@ def position_sampled(TIMESTEP, TOTAL_STEPS, SAMPLE_EVERY, OUT_STEPS, NUM_BODIES,
                 frames[b, out_i, 4] = prior_vel[b, 1]
                 frames[b, out_i, 5] = prior_vel[b, 2]
             out_i += 1
+            next_out += out_dt
 
-            if out_i >= OUT_STEPS:
+            if out_i > max_out:
                 break
 
-    return frames
+    return frames[:, :out_i, :]
 
-    @njit
-    def min_pair_distance(pos):
+@njit
+def min_pair_distance(pos):
 
-        #pair 0&1
-        dx = pos[1,0] - pos[0,0]
-        dy = pos[1,1] - pos[0,1]
-        dz = pos[1,2] - pos[0,2]
-        d01= (dx*dx + dy*dy + dz*dz) ** 0.5
+    #pair 0&1
+    dx = pos[1,0] - pos[0,0]
+    dy = pos[1,1] - pos[0,1]
+    dz = pos[1,2] - pos[0,2]
+    d01= (dx*dx + dy*dy + dz*dz) ** 0.5
 
-        #pair 0&2
-        dx = pos[2,0] - pos[0,0]
-        dy = pos[2,1] - pos[0,1]
-        dz = pos[2,2] - pos[0,2]
-        d02= (dx*dx + dy*dy + dz*dz) ** 0.5
+    #pair 0&2
+    dx = pos[2,0] - pos[0,0]
+    dy = pos[2,1] - pos[0,1]
+    dz = pos[2,2] - pos[0,2]
+    d02= (dx*dx + dy*dy + dz*dz) ** 0.5
 
-        #pair 1&2
-        dx = pos[2,0] - pos[1,0]
-        dy = pos[2,1] - pos[1,1]
-        dz = pos[2,2] - pos[1,2]
-        d12= (dx*dx + dy*dy + dz*dz) ** 0.5
+    #pair 1&2
+    dx = pos[2,0] - pos[1,0]
+    dy = pos[2,1] - pos[1,1]
+    dz = pos[2,2] - pos[1,2]
+    d12= (dx*dx + dy*dy + dz*dz) ** 0.5
 
-        return min(d01, d02, d12)
+    return min(d01, d02, d12)

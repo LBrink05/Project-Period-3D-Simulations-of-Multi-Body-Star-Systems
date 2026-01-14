@@ -60,7 +60,7 @@ def ode_rk45 (t, f, MASS, NUM_BODIES):
 
     for b in range(NUM_BODIES):
         acc[b] = acceleration(pos,b, MASS,NUM_BODIES)
-    dydt = np.zeros_like(y)
+    dydt = np.zeros_like(f)
     dydt[:3*NUM_BODIES] =vel.flatten()
     dydt[3*NUM_BODIES:] = acc.flatten()
     return dydt

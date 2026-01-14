@@ -667,7 +667,7 @@ class app(customtkinter.CTk):
         full = list()
 
         # lists of numerical methods
-        integrator_list = list(["leapfrog", "forwardeuler", "IAS15", "Adaptive_leapfrog"])
+        integrator_list = list(["leapfrog", "forwardeuler", "IAS15", "Adaptive_leapfrog", "rk45"])
 
         with open("Configurations/Stables.csv", "r") as presets:
             for x in presets:
@@ -832,5 +832,6 @@ class app(customtkinter.CTk):
 
         integrator("leapfrog")
         stableOrbits("Stable 1 - Equilateral Triangle")
+
 
 app().mainloop()

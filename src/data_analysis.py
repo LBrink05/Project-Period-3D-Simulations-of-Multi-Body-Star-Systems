@@ -52,7 +52,7 @@ def calculate_trajectory_error(reference_data, simulated_data, frame_idx):
     diff_norm = np.linalg.norm(ref_vec - sim_vec)
     return (diff_norm / ref_norm) * 100.0
 
-def calculate_hamiltonian(phase_space_data, masses, G=1.0):
+def calculate_hamiltonian(phase_space_data, masses, G=1.0, softening = 0.001):
 
     num_bodies = len(phase_space_data)
     
@@ -66,6 +66,7 @@ def calculate_hamiltonian(phase_space_data, masses, G=1.0):
     
     # Potential energy: V = -G * sum sum (m_i * m_j / r_ij)
     V = 0.0
+    eps2 = softening * softening
     for i in range(num_bodies):
         for j in range(i + 1, num_bodies):
             xi, yi, zi = phase_space_data[i][0], phase_space_data[i][1], phase_space_data[i][2]
@@ -74,7 +75,7 @@ def calculate_hamiltonian(phase_space_data, masses, G=1.0):
             dx = xj - xi
             dy = yj - yi
             dz = zj - zi
-            r = np.sqrt(dx**2 + dy**2 + dz**2)
+            r = np.sqrt((dx**2 + dy**2 + dz**2))
             
             if r > 0:  # Avoid division by zero
                 V -= G * masses[i] * masses[j] / r

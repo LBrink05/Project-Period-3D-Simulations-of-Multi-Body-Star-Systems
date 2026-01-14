@@ -213,9 +213,9 @@ class app(customtkinter.CTk):
             hamiltonian_errors = []
             
             for frame in frames:
-                traj_err, ham_err = error_func(frame)
-                trajectory_errors.append(traj_err)
-                hamiltonian_errors.append(ham_err)
+                    traj_err, ham_err = error_func(frame)
+                    trajectory_errors.append(traj_err)
+                    hamiltonian_errors.append(ham_err)
             
             # Calculate max errors
             traj_max = data_analysis.calculate_max_error(trajectory_errors, dt=1.0/24.0)
@@ -223,9 +223,10 @@ class app(customtkinter.CTk):
 
             # Create plot with two subplots
             fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-            
+
+            n = len(trajectory_errors)
             # Trajectory Error Plot
-            ax1.plot(TIMELINE, trajectory_errors, linewidth=2, color='red', label='Trajectory Error')
+            ax1.plot(TIMELINE[1:n], trajectory_errors[1:n], linewidth=2, color='red', label='Trajectory Error')
             ax1.axhline(y=traj_max, color='darkred', linestyle='--', linewidth=1.5, 
                        label=f'%_MAX = {traj_max:.2e}%')
             ax1.set_xlabel('Time', fontsize=11)

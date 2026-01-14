@@ -52,7 +52,7 @@ def acceleration_components(prior_pos, body, MASS, NUM_BODIES):
             ry = prior_pos[other, 1] - py
             rz = prior_pos[other, 2] - pz
 
-            r2 = rx * rx + ry * ry + rz * rz + 0.01 * 0.01
+            r2 = rx * rx + ry * ry + rz * rz + 0.001 **2
             r3 = r2 ** 1.5
 
             ax += MASS[other] * rx / r3

@@ -1,6 +1,6 @@
 import csv
 import numpy as np
-from scipy.linalg import qr
+from scipy.linalg import qr, expm
 
 def read_phase_space(NUM_BODIES, path):
     
@@ -201,11 +201,16 @@ def compute_jacobian(positions, velocities, masses, G=1.0, softening=0.001):
     
     return J
 
-def calculate_lyapunov_exponents(simulated_data, masses, dt, renorm_interval=10, G=1.0):
+
+def calculate_lyapunov_exponents(simulated_data, masses, precision, renorm_interval=10, G=1.0):
     
     num_bodies = len(simulated_data)
     num_frames = len(simulated_data[0])
-    phase_dim = 6 * num_bodies  # Full phase space dimension
+    phase_dim = 6 * num_bodies
+    
+    # Time between saved frames in simulation time units
+    sample_every = max(1, int(1 / precision))
+    dt = precision * sample_every  # = 1.0 sim time unit (when precision <= 1)
     
     # Initialize perturbation matrix as identity
     V = np.eye(phase_dim)
@@ -215,7 +220,7 @@ def calculate_lyapunov_exponents(simulated_data, masses, dt, renorm_interval=10,
     
     # Store exponents over time for visualization
     exponents_over_time = []
-    time_points = []
+    time_points = []  # In simulation time units
     
     renorm_count = 0
     
@@ -227,8 +232,8 @@ def calculate_lyapunov_exponents(simulated_data, masses, dt, renorm_interval=10,
         # Compute Jacobian at current state
         J = compute_jacobian(positions, velocities, masses, G)
         
-        # Evolve perturbation vectors: V_new = (I + J*dt) * V
-        V = V + dt * (J @ V)
+        # Evolve perturbation vectors using matrix exponential
+        V = expm(J * dt) @ V
         
         # Perform QR decomposition at renormalization intervals
         if (frame_idx % renorm_interval) == 0:
@@ -240,29 +245,26 @@ def calculate_lyapunov_exponents(simulated_data, masses, dt, renorm_interval=10,
                     S[i] += np.log(abs(R[i, i]))
             
             renorm_count += 1
-            
-            # Reset V to orthonormal Q
             V = Q
             
-            # Calculate current exponents and store
-            if renorm_count > 0:
-                current_time = frame_idx * dt
-                current_exponents = S / current_time
-                exponents_over_time.append(current_exponents.copy())
-                time_points.append(current_time)
+            # Store current exponents
+            current_time = frame_idx * dt  # Simulation time units
+            current_exponents = S / current_time
+            exponents_over_time.append(current_exponents.copy())
+            time_points.append(current_time)
     
-    # Final Lyapunov exponents
+    # Final Lyapunov exponents (in 1/sim_time_unit)
     total_time = (num_frames - 1) * dt
     if total_time > 0:
         lyapunov_spectrum = S / total_time
     else:
         lyapunov_spectrum = np.zeros(phase_dim)
     
-    # Sort in descending order and keep track of original indices
+    # Sort in descending order
     sorted_indices = np.argsort(lyapunov_spectrum)[::-1]
     lyapunov_spectrum_sorted = lyapunov_spectrum[sorted_indices]
     
-    # Calculate Lyapunov time from maximum exponent
+    # Lyapunov time (in simulation time units)
     lambda_max = lyapunov_spectrum_sorted[0]
     if lambda_max > 0:
         lyapunov_time = 1.0 / lambda_max

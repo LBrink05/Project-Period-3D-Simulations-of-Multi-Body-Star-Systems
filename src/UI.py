@@ -290,8 +290,19 @@ class app(customtkinter.CTk):
             
             # Calculate Lyapunov exponents
             start_time = time.time()
+
             lyapunov_spectrum, lyapunov_time, exponents_over_time, time_points, sorted_indices = \
-                data_analysis.calculate_lyapunov_exponents(simulated_data, masses, dt=precision, renorm_interval=10)
+    data_analysis.calculate_lyapunov_exponents(simulated_data, masses, 
+                                                precision=precision, 
+                                                renorm_interval=10)
+
+            # Convert time_points from sim units to display seconds
+            time_points_seconds = [t / 24.0 for t in time_points]
+
+            # Convert Lyapunov exponents from 1/sim_unit to 1/second for display
+            lyapunov_spectrum_display = lyapunov_spectrum * 24.0
+            lyapunov_time_seconds = lyapunov_time / 24.0
+
             calc_time = time.time() - start_time
             
             self.lyapunov_status.pack_forget()
@@ -301,9 +312,9 @@ class app(customtkinter.CTk):
             
             # Plot 1: Full Lyapunov Spectrum (bar plot)
             ax1 = plt.subplot(3, 1, 1)
-            indices = np.arange(len(lyapunov_spectrum))
-            colors_spectrum = ['red' if x > 0 else 'blue' if x < 0 else 'gray' for x in lyapunov_spectrum]
-            ax1.bar(indices, lyapunov_spectrum, color=colors_spectrum, alpha=0.7, edgecolor='black')
+            indices = np.arange(len(lyapunov_spectrum_display))
+            colors_spectrum = ['red' if x > 0 else 'blue' if x < 0 else 'gray' for x in lyapunov_spectrum_display]
+            ax1.bar(indices, lyapunov_spectrum_display, color=colors_spectrum, alpha=0.7, edgecolor='black')
             ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
             
             # Create dimension labels for x-axis based on original (unsorted) indices
@@ -321,33 +332,47 @@ class app(customtkinter.CTk):
             ax1.set_xticks(indices)
             ax1.set_xticklabels(dimension_labels_sorted, rotation=45, ha='right', fontsize=8)
             ax1.set_xlabel('Phase Space Dimension (sorted by λ value)', fontsize=11)
-            ax1.set_ylabel('Lyapunov Exponent λ_i', fontsize=11)
+            ax1.set_ylabel('Lyapunov Exponent λ_i (1/s)', fontsize=11)
             ax1.set_title('Full Lyapunov Spectrum (sorted descending)', fontsize=12, fontweight='bold')
             ax1.grid(True, alpha=0.3, axis='y')
             
             # Add text annotation for max exponent
-            if len(lyapunov_spectrum) > 0:
-                ax1.text(0.02, 0.98, f'λ_max = {lyapunov_spectrum[0]:.4e} ({dimension_labels_sorted[0]})\nt_L = {lyapunov_time:.4e}',
+            if len(lyapunov_spectrum_display) > 0:
+                ax1.text(0.02, 0.98, f'λ_max = {lyapunov_spectrum_display[0]:.4e} /s ({dimension_labels_sorted[0]})\nt_L = {lyapunov_time_seconds:.4e} s',
                         transform=ax1.transAxes, fontsize=10, verticalalignment='top',
                         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
             
             # Plot 2: Evolution of top 6 exponents over renormalization steps
             ax2 = plt.subplot(3, 1, 2)
             if len(exponents_over_time) > 0 and len(time_points) > 0:
-                exponents_array = np.array(exponents_over_time)
+                # Convert exponents to 1/second
+                exponents_array = np.array(exponents_over_time) * 24.0
+                time_array = np.array(time_points_seconds)
+                
                 # Get indices of top 3 (most positive) and bottom 3 (most negative)
                 top_3_indices = list(range(3))
-                bottom_3_indices = list(range(len(lyapunov_spectrum) - 3, len(lyapunov_spectrum)))
+                bottom_3_indices = list(range(len(lyapunov_spectrum_display) - 3, len(lyapunov_spectrum_display)))
                 indices_to_plot = top_3_indices + bottom_3_indices
+                
                 # Distinct colors for each exponent
                 exponent_colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#a65628']
+                
                 for idx, i in enumerate(indices_to_plot):
-                    ax2.scatter(time_points, exponents_array[:, i], 
-                                label=f'{dimension_labels_sorted[i]}: {lyapunov_spectrum[i]:.3e}',
+                    # Scatter points
+                    ax2.scatter(time_array, exponents_array[:, i], 
+                                label=f'{dimension_labels_sorted[i]}: {lyapunov_spectrum_display[i]:.3e} /s',
                                 s=50, color=exponent_colors[idx], alpha=0.8)
+                    
+                    # Trend line (polynomial fit, degree 2)
+                    if len(time_array) > 2:
+                        z = np.polyfit(time_array, exponents_array[:, i], 2)
+                        p = np.poly1d(z)
+                        t_smooth = np.linspace(time_array.min(), time_array.max(), 100)
+                        ax2.plot(t_smooth, p(t_smooth), '--', color=exponent_colors[idx], alpha=0.6, linewidth=1.5)
+                
                 ax2.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
-                ax2.set_xlabel('Renormalization Steps', fontsize=11)
-                ax2.set_ylabel('Lyapunov Exponent', fontsize=11)
+                ax2.set_xlabel('Time (s)', fontsize=11)
+                ax2.set_ylabel('Lyapunov Exponent (1/s)', fontsize=11)
                 ax2.set_title('Evolution of Top 6 Lyapunov Exponents (by magnitude)', fontsize=12, fontweight='bold')
                 ax2.legend(loc='best', fontsize=9)
                 ax2.grid(True, alpha=0.3)
@@ -355,20 +380,33 @@ class app(customtkinter.CTk):
             # Plot 3: Phase space volume preservation (sum of exponents)
             ax3 = plt.subplot(3, 1, 3)
             if len(exponents_over_time) > 0:
-                exponents_array = np.array(exponents_over_time)
+                # Convert exponents to 1/second
+                exponents_array = np.array(exponents_over_time) * 24.0
+                time_array = np.array(time_points_seconds)
                 sum_exponents = np.sum(exponents_array, axis=1)
-                ax3.scatter(time_points, sum_exponents, s=50, color='green', label='Σλ_i')
+                
+                # Scatter points
+                ax3.scatter(time_array, sum_exponents, s=50, color='green', label='Σλ_i')
+                
+                # Trend line (polynomial fit, degree 2)
+                if len(time_array) > 2:
+                    z = np.polyfit(time_array, sum_exponents, 2)
+                    p = np.poly1d(z)
+                    t_smooth = np.linspace(time_array.min(), time_array.max(), 100)
+                    ax3.plot(t_smooth, p(t_smooth), '--', color='darkgreen', alpha=0.8, linewidth=2, label='Trend')
+                
                 ax3.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
-                ax3.set_xlabel('Renormalization Steps', fontsize=11)
-                ax3.set_ylabel('Sum of Exponents', fontsize=11)
+                ax3.set_xlabel('Time (s)', fontsize=11)
+                ax3.set_ylabel('Sum of Exponents (1/s)', fontsize=11)
                 ax3.set_title('Phase Space Volume Preservation (Liouville\'s Theorem)', fontsize=12, fontweight='bold')
+                ax3.legend(loc='best', fontsize=9)
                 ax3.grid(True, alpha=0.3)
+                
                 # Annotation about Liouville's theorem
                 final_sum = sum_exponents[-1] if len(sum_exponents) > 0 else 0
-                ax3.text(0.02, 0.98, f'Final Σλ_i = {final_sum:.4e}\n(Should be ≈ 0 for Hamiltonian systems)',
-            transform=ax3.transAxes, fontsize=9, verticalalignment='top',
-            bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
-            
+                ax3.text(0.02, 0.98, f'Final Σλ_i = {final_sum:.4e} /s\n(Should be ≈ 0 for Hamiltonian systems)',
+                        transform=ax3.transAxes, fontsize=9, verticalalignment='top',
+                        bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
             plt.tight_layout()
             
             # Save figure

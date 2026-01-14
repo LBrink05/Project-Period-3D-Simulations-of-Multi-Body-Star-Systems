@@ -77,7 +77,7 @@ class app(customtkinter.CTk):
 
         def show_animation(duration):
             # CONSTANTS
-            NUM_BODIES = len(os.listdir(get_path(-1)))
+            NUM_BODIES = len([f for f in os.listdir(get_path(-1)) if f.startswith('body') and f.endswith('.csv')])
             TRAIL=200
             # length of timeline
             #TIMESTEP = 0.001 to 0.1
@@ -169,7 +169,7 @@ class app(customtkinter.CTk):
 
         def show_statistics(duration, precision, selection):
             #constants
-            NUM_BODIES = len(os.listdir(get_path(-1)))
+            NUM_BODIES = len([f for f in os.listdir(get_path(-1)) if f.startswith('body') and f.endswith('.csv')])
             
             #opening reference data and simulation data
             path_reference = Path(str(CWDDIR)) / 'Reference_Data' / ((str(selection).split(' - ')[1]) + "_IAS15_dT_" + "0.0005")
@@ -274,7 +274,7 @@ class app(customtkinter.CTk):
             if self.last_simulation_data is None:
                 self.lyapunov_status.configure(text="Please run a simulation first")
                 return
-            
+    
             # Update status
             self.lyapunov_status.configure(text="Calculating Lyapunov exponents...")
             self.update()
@@ -288,13 +288,16 @@ class app(customtkinter.CTk):
             path_simulation = get_path(-1)
             simulated_data = data_analysis.read_phase_space(NUM_BODIES, path_simulation)
             
+            # Read timestep sizes from CSV
+            timestep_sizes = data_analysis.read_timestep_sizes(path_simulation)
+            
             # Calculate Lyapunov exponents
             start_time = time.time()
 
             lyapunov_spectrum, lyapunov_time, exponents_over_time, time_points, sorted_indices = \
-    data_analysis.calculate_lyapunov_exponents(simulated_data, masses, 
-                                                precision=precision, 
-                                                renorm_interval=10)
+                data_analysis.calculate_lyapunov_exponents(simulated_data, masses, 
+                                                            timestep_sizes=timestep_sizes,
+                                                            renorm_interval=10)
 
             # Convert time_points from sim units to display seconds
             time_points_seconds = [t / 24.0 for t in time_points]

@@ -26,10 +26,12 @@ def Simulate(data_list, precision, duration):
     timestep = float(precision)
     total_steps = int(duration * 24 / timestep) + 1  # include t=0
 
+
+
     sample_every = max(1, int(1 / timestep))
     out_steps = (total_steps - 1) // sample_every + 1
 
-    frames = position_sampled(timestep, total_steps, sample_every, out_steps, NUM_BODIES, start_pos, start_vel, mass)
+    frames, timestep_size_list = position_sampled(timestep, total_steps, sample_every, out_steps, NUM_BODIES, start_pos, start_vel, mass)
 
     # save CSV files
     out_dir = Path(str(CWDDIR)) / "Simulated_Data"
@@ -37,6 +39,9 @@ def Simulate(data_list, precision, duration):
     for body in range(NUM_BODIES):
         path = out_dir / f"body{body}.csv"
         np.savetxt(path, frames[body], delimiter=",")
+
+    timestep_path = out_dir / "timestep_sizes.csv"
+    np.savetxt(timestep_path, timestep_size_list, delimiter=",")
 
 
 # --- Core physics and integrator (Numba) ---
@@ -117,6 +122,7 @@ def position_sampled(TIMESTEP, TOTAL_STEPS, SAMPLE_EVERY, OUT_STEPS, NUM_BODIES,
     Returns frames shaped (NUM_BODIES, OUT_STEPS, 6) with [x,y,z,vx,vy,vz].
     """
     frames = np.zeros((NUM_BODIES, OUT_STEPS, 6), dtype=np.float64)
+    timestep_size_list = np.zeros(OUT_STEPS, dtype=np.float64)
 
     prior_pos = START_POS.copy()
     prior_vel = START_VEL.copy()
@@ -134,6 +140,8 @@ def position_sampled(TIMESTEP, TOTAL_STEPS, SAMPLE_EVERY, OUT_STEPS, NUM_BODIES,
         frames[b, out_i, 4] = prior_vel[b, 1]
         frames[b, out_i, 5] = prior_vel[b, 2]
 
+    timestep_size_list[out_i] = TIMESTEP * SAMPLE_EVERY
+    
     out_i += 1
 
     for t in range(1, TOTAL_STEPS):
@@ -147,10 +155,12 @@ def position_sampled(TIMESTEP, TOTAL_STEPS, SAMPLE_EVERY, OUT_STEPS, NUM_BODIES,
                 frames[b, out_i, 3] = prior_vel[b, 0]
                 frames[b, out_i, 4] = prior_vel[b, 1]
                 frames[b, out_i, 5] = prior_vel[b, 2]
+
+            timestep_size_list[out_i] = TIMESTEP * SAMPLE_EVERY
             out_i += 1
 
             if out_i >= OUT_STEPS:
                 break
 
-    return frames
+    return frames, timestep_size_list
 

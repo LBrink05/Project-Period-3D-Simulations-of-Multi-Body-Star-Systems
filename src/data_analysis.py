@@ -24,6 +24,22 @@ def read_phase_space(NUM_BODIES, path):
     
     return phase_space_data
 
+def read_timestep_sizes(path):
+    """
+    Read timestep sizes from the timestep_sizes.csv file.
+    Returns a numpy array of timestep sizes for each frame.
+    """
+    timestep_path = str(path) + "/timestep_sizes.csv"
+    timestep_sizes = []
+    
+    with open(timestep_path, "r") as data:
+        for line in data:
+            value = line.strip()
+            if value:
+                timestep_sizes.append(float(value))
+    
+    return np.array(timestep_sizes)
+
 def calculate_phase_space_norm(phase_space_data, frame_idx):
     
     vec = []
@@ -202,15 +218,17 @@ def compute_jacobian(positions, velocities, masses, G=1.0, softening=0.001):
     return J
 
 
-def calculate_lyapunov_exponents(simulated_data, masses, precision, renorm_interval=10, G=1.0):
+def calculate_lyapunov_exponents(simulated_data, masses, timestep_sizes, renorm_interval=10, G=1.0, skip_frames=1, verbose=True):
+    """
+    Calculate Lyapunov exponents using timestep sizes from CSV.
+    """
     
     num_bodies = len(simulated_data)
     num_frames = len(simulated_data[0])
     phase_dim = 6 * num_bodies
     
-    # Time between saved frames in simulation time units
-    sample_every = max(1, int(1 / precision))
-    dt = precision * sample_every  # = 1.0 sim time unit (when precision <= 1)
+    if verbose:
+        print(f"Lyapunov calculation: {num_frames} frames, skip={skip_frames}")
     
     # Initialize perturbation matrix as identity
     V = np.eye(phase_dim)
@@ -223,8 +241,21 @@ def calculate_lyapunov_exponents(simulated_data, masses, precision, renorm_inter
     time_points = []  # In simulation time units
     
     renorm_count = 0
+    cumulative_time = 0.0
+    processed = 0
+    last_frame = 0
     
-    for frame_idx in range(1, num_frames):
+    for frame_idx in range(skip_frames, num_frames, skip_frames):
+        # Accumulate time for all frames since last processed frame
+        for i in range(last_frame + 1, frame_idx + 1):
+            cumulative_time += timestep_sizes[i]
+        last_frame = frame_idx
+        
+        # Effective dt for Jacobian evolution (sum of skipped timesteps)
+        dt = cumulative_time - (time_points[-1] if time_points else 0.0)
+        if len(time_points) == 0:
+            dt = cumulative_time
+        
         # Extract current state
         positions = np.array([simulated_data[b][frame_idx][:3] for b in range(num_bodies)])
         velocities = np.array([simulated_data[b][frame_idx][3:6] for b in range(num_bodies)])
@@ -232,39 +263,46 @@ def calculate_lyapunov_exponents(simulated_data, masses, precision, renorm_inter
         # Compute Jacobian at current state
         J = compute_jacobian(positions, velocities, masses, G)
         
-        # Evolve perturbation vectors using matrix exponential
-        V = expm(J * dt) @ V
+        # Use approximation for small dt, full expm for larger dt
+        if dt < 0.1:
+            Jdt = J * dt
+            V = (np.eye(phase_dim) + Jdt + 0.5 * Jdt @ Jdt) @ V
+        else:
+            V = expm(J * dt) @ V
+        
+        processed += 1
         
         # Perform QR decomposition at renormalization intervals
-        if (frame_idx % renorm_interval) == 0:
+        if (processed % renorm_interval) == 0:
             Q, R = qr(V)
             
-            # Accumulate logarithms of diagonal elements
             for i in range(phase_dim):
-                if R[i, i] > 0:
+                if abs(R[i, i]) > 0:
                     S[i] += np.log(abs(R[i, i]))
             
             renorm_count += 1
             V = Q
             
-            # Store current exponents
-            current_time = frame_idx * dt  # Simulation time units
-            current_exponents = S / current_time
-            exponents_over_time.append(current_exponents.copy())
-            time_points.append(current_time)
+            if cumulative_time > 0:
+                current_exponents = S / cumulative_time
+                exponents_over_time.append(current_exponents.copy())
+                time_points.append(cumulative_time)
+        
+        if verbose and processed % 500 == 0:
+            print(f"  Processed {processed}/{num_frames//skip_frames} frames ({100*frame_idx/num_frames:.1f}%)")
     
-    # Final Lyapunov exponents (in 1/sim_time_unit)
-    total_time = (num_frames - 1) * dt
+    if verbose:
+        print(f"  Done! Processed {processed} frames")
+    
+    total_time = cumulative_time
     if total_time > 0:
         lyapunov_spectrum = S / total_time
     else:
         lyapunov_spectrum = np.zeros(phase_dim)
     
-    # Sort in descending order
     sorted_indices = np.argsort(lyapunov_spectrum)[::-1]
     lyapunov_spectrum_sorted = lyapunov_spectrum[sorted_indices]
     
-    # Lyapunov time (in simulation time units)
     lambda_max = lyapunov_spectrum_sorted[0]
     if lambda_max > 0:
         lyapunov_time = 1.0 / lambda_max

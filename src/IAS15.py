@@ -5,6 +5,7 @@ import rebound
 # most precise, most resource intensive numerical integrator method, used as reference for all other orbits.
 # CONSTANTS
 num_bodies = 3
+
 # setting cwd directory
 CWDDIR = Path.cwd()
 
@@ -18,6 +19,7 @@ def Simulate(data_list, precision, duration):
     start_vel = np.array([[data_list[2][0], data_list[2][1], data_list[2][2]],
                           [data_list[5][0], data_list[5][1], data_list[5][2]],
                           [data_list[8][0], data_list[8][1], data_list[8][2]]], dtype=np.float64)
+
     TIMELINE = np.linspace(0, duration * 24, duration * 24)  # length of timeline
     timestep = precision
     timestep_num = int(TIMELINE.size / timestep)  # must be int
@@ -26,51 +28,66 @@ def Simulate(data_list, precision, duration):
     pos, vel = position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass)
     frames = np.concatenate([pos[:, ::frameratio, :], vel[:, ::frameratio, :]], axis=-1)
 
+    # Calculate timestep_size_list (time between output frames)
+    num_output_frames = frames.shape[1]
+    timestep_size_list = np.full(num_output_frames, timestep * frameratio, dtype=np.float64)
+
+    # Create output directory
+    out_dir = Path(str(CWDDIR)) / 'Simulated_Data'
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     for body in range(0, num_bodies):
-        path = Path(str(CWDDIR)) / 'Simulated_Data' / f"body{body}.csv"
+        path = out_dir / f"body{body}.csv"
         np.savetxt(path, frames[body], delimiter=",")
 
-        #saving to reference data as well
+        # saving to reference data as well
         if precision <= 0.0005:
-            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / (str(data_list[-1]) + "_IAS15_dT_" + str(precision)) #adds info about the configuration and timestep size
+            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / (str(data_list[-1]) + "_IAS15_dT_" + str(precision))
             path_reference.mkdir(parents=True, exist_ok=True)
             path_reference = path_reference / f"body{body}.csv"
             np.savetxt(path_reference, frames[body], delimiter=",")
 
+    # Save timestep sizes
+    timestep_path = out_dir / "timestep_sizes.csv"
+    np.savetxt(timestep_path, timestep_size_list, delimiter=",")
 
 
 def position(timestep, timestep_num, num_bodies, start_pos, start_vel, mass):
     # function to calculate the position of bodies over time
-    # pos is vector pos[body][x,y,z]
-
+    # pos is vector pos[body][time_index][x,y,z]
     sim = rebound.Simulation()
     sim.integrator = "ias15"
-    sim.add(m=mass[0], x=start_pos[0][0], y=start_pos[0][1], z=start_pos[0][2], vx=start_vel[0][0], vy=start_vel[0][1],
-            vz=start_vel[0][2])
-    sim.add(m=mass[1], x=start_pos[1][0], y=start_pos[1][1], z=start_pos[1][2], vx=start_vel[1][0], vy=start_vel[1][1],
-            vz=start_vel[1][2])
-    sim.add(m=mass[2], x=start_pos[2][0], y=start_pos[2][1], z=start_pos[2][2], vx=start_vel[2][0], vy=start_vel[2][1],
-            vz=start_vel[2][2])
+
+    sim.add(m=mass[0], x=start_pos[0][0], y=start_pos[0][1], z=start_pos[0][2],
+            vx=start_vel[0][0], vy=start_vel[0][1], vz=start_vel[0][2])
+    sim.add(m=mass[1], x=start_pos[1][0], y=start_pos[1][1], z=start_pos[1][2],
+            vx=start_vel[1][0], vy=start_vel[1][1], vz=start_vel[1][2])
+    sim.add(m=mass[2], x=start_pos[2][0], y=start_pos[2][1], z=start_pos[2][2],
+            vx=start_vel[2][0], vy=start_vel[2][1], vz=start_vel[2][2])
+
     sim.dt = timestep
+
     pos = np.zeros((num_bodies, timestep_num, 3), dtype=np.float64)
     vel = np.zeros((num_bodies, timestep_num, 3), dtype=np.float64)
-    # initialize arrays
-    prior_pos = start_pos.copy()
-    prior_vel = start_vel.copy()
-    # store initial pos
+
+    # store initial pos/vel
     for b in range(num_bodies):
-        pos[b, 0] = prior_pos[b]
-        vel[b, 0] = prior_vel[b]
+        pos[b, 0] = start_pos[b]
+        vel[b, 0] = start_vel[b]
 
     # main loop
-    for t in range(timestep_num):
-        sim.integrate(t*timestep)
+    for t in range(1, timestep_num):  # Start from 1 since t=0 is already stored
+        sim.integrate(t * timestep)
         for b in range(num_bodies):
-            pos[b,t] = (
+            pos[b, t] = (
                 sim.particles[b].x,
                 sim.particles[b].y,
                 sim.particles[b].z
+            )
+            vel[b, t] = (
+                sim.particles[b].vx,
+                sim.particles[b].vy,
+                sim.particles[b].vz
             )
 
     return pos, vel

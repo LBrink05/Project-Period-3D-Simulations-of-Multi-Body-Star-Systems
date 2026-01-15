@@ -33,7 +33,7 @@ def Simulate(data_list, precision, duration):
 
     eta = 0.01
 
-    frames = position_adaptive(tend, out_dt, NUM_BODIES, start_pos, start_vel, mass, eta, dt_min, dt_max)
+    frames, timestep_size_list = position_adaptive(tend, out_dt, NUM_BODIES, start_pos, start_vel, mass, eta, dt_min, dt_max)
 
     # save CSV files
     out_dir = Path(str(CWDDIR)) / "Simulated_Data"
@@ -41,6 +41,9 @@ def Simulate(data_list, precision, duration):
     for body in range(NUM_BODIES):
         path = out_dir / f"body{body}.csv"
         np.savetxt(path, frames[body], delimiter=",")
+        
+    timestep_path = out_dir / "timestep_sizes.csv"
+    np.savetxt(timestep_path, timestep_size_list, delimiter=",")
 
 
 # --- Core physics and integrator (Numba) ---
@@ -119,11 +122,12 @@ def adaptive_leapfrog_inplace(MASS, TIMESTEP, NUM_BODIES, prior_pos, prior_vel, 
 @njit
 def position_adaptive(tend, out_dt, NUM_BODIES, START_POS, START_VEL, MASS, eta, dt_min, dt_max):
     """
-    Runs the integrator for TOTAL_STEPS and stores only every SAMPLE_EVERY step.
+    Runs the integrator and stores output at regular intervals.
     Returns frames shaped (NUM_BODIES, OUT_STEPS, 6) with [x,y,z,vx,vy,vz].
     """
-    max_out = int(tend * out_dt)
+    max_out = int(tend / out_dt) + 1
     frames = np.zeros((NUM_BODIES, max_out, 6), dtype=np.float64)
+    timestep_size_list = np.zeros(max_out, dtype=np.float64)  # Must be created BEFORE any use
 
     prior_pos = START_POS.copy()
     prior_vel = START_VEL.copy()
@@ -132,7 +136,12 @@ def position_adaptive(tend, out_dt, NUM_BODIES, START_POS, START_VEL, MASS, eta,
     acc_new = np.zeros((NUM_BODIES, 3), dtype=np.float64)
 
     out_i = 0
-    # store t=0
+    t = 0.0
+    next_out = out_dt
+
+    Mtot = MASS[0] + MASS[1] + MASS[2]
+
+    # Store t=0 frame
     for b in range(NUM_BODIES):
         frames[b, out_i, 0] = prior_pos[b, 0]
         frames[b, out_i, 1] = prior_pos[b, 1]
@@ -140,17 +149,12 @@ def position_adaptive(tend, out_dt, NUM_BODIES, START_POS, START_VEL, MASS, eta,
         frames[b, out_i, 3] = prior_vel[b, 0]
         frames[b, out_i, 4] = prior_vel[b, 1]
         frames[b, out_i, 5] = prior_vel[b, 2]
-
+    timestep_size_list[out_i] = 0.0
     out_i += 1
-    t = 0
-    next_out = out_dt
-
-    Mtot = MASS[0]+MASS[1]+MASS[2]
 
     while t < tend:
         rmin = min_pair_distance(prior_pos)
-
-        dt = eta * ((rmin ** 3)/Mtot) ** 0.5
+        dt = eta * ((rmin ** 3) / Mtot) ** 0.5
 
         if dt < dt_min:
             dt = dt_min
@@ -163,10 +167,8 @@ def position_adaptive(tend, out_dt, NUM_BODIES, START_POS, START_VEL, MASS, eta,
         if t + dt > next_out:
             dt = next_out - t
 
-
         adaptive_leapfrog_inplace(MASS, dt, NUM_BODIES, prior_pos, prior_vel, acc, acc_new)
         t += dt
-
 
         if t >= next_out - 1e-15:
             for b in range(NUM_BODIES):
@@ -176,13 +178,14 @@ def position_adaptive(tend, out_dt, NUM_BODIES, START_POS, START_VEL, MASS, eta,
                 frames[b, out_i, 3] = prior_vel[b, 0]
                 frames[b, out_i, 4] = prior_vel[b, 1]
                 frames[b, out_i, 5] = prior_vel[b, 2]
+            timestep_size_list[out_i] = dt
             out_i += 1
             next_out += out_dt
 
-            if out_i > max_out:
+            if out_i >= max_out:
                 break
 
-    return frames[:, :out_i, :]
+    return frames[:, :out_i, :], timestep_size_list[:out_i]
 
 @njit
 def min_pair_distance(pos):

@@ -685,6 +685,8 @@ class app(customtkinter.CTk):
             popup.geometry("320x150")
             popup.resizable(False, False)
             popup.attributes("-topmost", True)
+            popup.update_idletasks()  # Process pending display updates
+            popup.wait_visibility()   # Wait until window is actually visible
             popup.grab_set()
 
             label = customtkinter.CTkLabel(

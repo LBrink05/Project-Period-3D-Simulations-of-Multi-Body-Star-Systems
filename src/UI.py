@@ -1,6 +1,7 @@
 #IMPORT LIBRARIES
 import ast
 import os
+import threading
 from ast import literal_eval
 from tkinter import IntVar, ttk, Toplevel
 import customtkinter
@@ -44,7 +45,7 @@ class app(customtkinter.CTk):
         self.anim = None
         self.current_fig = None
         self.last_simulation_data = None  # Store last simulation info
-        
+
         # Define all your functions INSIDE __init__ first
         def on_closing():
 
@@ -572,63 +573,161 @@ class app(customtkinter.CTk):
 
         def integrator(selection):
             self.dropdown2.set(selection)
-            
+
         #submits button logic, checks if variables are valid and enters them in a list
         def update():
-            
-            #get time when button was pressed
-            submission_time = datetime.datetime.now()
+            working_popup = show_working_popup()
+            timeout_popup = None
+            finished = False
 
-            selection = self.dropdown1.get()
-            integrator_selection = importlib.import_module(self.dropdown2.get())
+            def timeout_trigger():
+                nonlocal timeout_popup
+                if not finished:
+                    timeout_popup = show_timeout_popup()
 
-            print("Using Numerical Method: ", str(integrator_selection) + "\n")
-            
-            num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
-            precision = 0.01
-            if self.var2.get() == 0:
-                precision = round(self.precision.get(), 4)
-            elif self.var2.get() == 1:
-                precision = float(self.precisionoverride.get())
-            
-            # Extract masses for storage
-            if selection.startswith('S'):
-                masses = [stables[num][1], stables[num][4], stables[num][7]]
-            else:
-                masses = [customs[num][1], customs[num][4], customs[num][7]]
-            
-            if self.var1.get() == 1:
-                if self.position1.get()[0]!="(" or self.position2.get()[0]!="(" or self.position3.get()[0]!="(" or self.position1.get()[-1]!=")" or self.position2.get()[-1]!=")" or self.position3.get()[-1]!=")" or self.velocity1.get()[0]!="(" or self.velocity2.get()[0]!="(" or self.velocity3.get()[0]!="(" or self.velocity1.get()[-1]!=")" or self.velocity2.get()[-1]!=")" or self.velocity3.get()[-1]!=")":
-                    self.textfield.configure(text="Please include AND close brackets for position and velocity")
-                    return
-                else:
-                    customData = list((eval(self.position1.get()),eval(self.mass1.get()),eval(self.velocity1.get()),eval(self.position2.get()),eval(self.mass2.get()),eval(self.velocity2.get()),eval(self.position3.get()),eval(self.mass3.get()),eval(self.velocity3.get())))
-                    masses = [customData[1], customData[4], customData[7]]
-                    integrator_selection.Simulate(customData, precision, int(self.durationVariable.get()))
-                    show_animation(int(self.durationVariable.get()))
-            else:
-                if self.dropdown1.get().startswith('S'):
-                    integrator_selection.Simulate(stables[num], precision, int(self.durationVariable.get()))
-                    show_animation(int(self.durationVariable.get()))
-                else:
-                    integrator_selection.Simulate(customs[num], precision, int(self.durationVariable.get()))
-                    show_animation(int(self.durationVariable.get()))
-            
-            rendering_time = datetime.datetime.now()
-            time_elapsed = rendering_time -  submission_time
-            print("Processing time of simulation: " + str(time_elapsed) + "\n")
-            
-            # Store simulation data for Lyapunov analysis
-            NUM_BODIES = 3
-            self.last_simulation_data = {
-                'num_bodies': NUM_BODIES,
-                'masses': masses,
-                'precision': precision,
-                'duration': int(self.durationVariable.get()),
-                'selection': selection
-            }
+            def run_simulation():
+                nonlocal finished
+                try:
+                    submission_time = datetime.datetime.now()
 
-            show_statistics(int(self.durationVariable.get()), precision, selection)
+                    selection = self.dropdown1.get()
+                    integrator_selection = importlib.import_module(self.dropdown2.get())
+
+                    num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
+
+                    precision = 0.01
+                    if self.var2.get() == 0:
+                        precision = round(self.precision.get(), 4)
+                    elif self.var2.get() == 1:
+                        precision = float(self.precisionoverride.get())
+
+                    if self.var1.get() == 1:
+                        customData = list((
+                            eval(self.position1.get()),
+                            eval(self.mass1.get()),
+                            eval(self.velocity1.get()),
+                            eval(self.position2.get()),
+                            eval(self.mass2.get()),
+                            eval(self.velocity2.get()),
+                            eval(self.position3.get()),
+                            eval(self.mass3.get()),
+                            eval(self.velocity3.get())
+                        ))
+
+                        integrator_selection.Simulate(
+                            customData, precision, int(self.durationVariable.get())
+                        )
+                    else:
+                        integrator_selection.Simulate(
+                            stables[num], precision, int(self.durationVariable.get())
+                        )
+
+                    finished = True
+
+                    # GUI updates MUST happen on main thread
+                    self.after(0, lambda: show_animation(int(self.durationVariable.get())))
+                    self.after(0, lambda: show_statistics(
+                        int(self.durationVariable.get()), precision, selection
+                    ))
+
+                except Exception as e:
+                    self.after(0, lambda: show_error_popup(e))
+
+                finally:
+                    finished = True
+                    self.after(0, cleanup)
+
+            def cleanup():
+                if working_popup:
+                    working_popup.destroy()
+                if timeout_popup:
+                    timeout_popup.destroy()
+
+            # Start timeout watchdog (2 minutes seconds)
+            self.after(120000, timeout_trigger)
+
+            # Start simulation thread
+            threading.Thread(target=run_simulation, daemon=True).start()
+
+        def show_error_popup(error):
+            popup = customtkinter.CTkToplevel(self)
+            popup.title("Simulation Error")
+            popup.geometry("500x250")
+            popup.resizable(False, False)
+            popup.attributes("-topmost", True)
+            popup.grab_set()
+
+            frame = customtkinter.CTkFrame(popup)
+            frame.pack(expand=True, fill="both", padx=20, pady=20)
+
+            error_text = f"{type(error).__name__}:\n\n{error}"
+
+            label = customtkinter.CTkLabel(
+                frame,
+                text=error_text,
+                text_color="red",
+                wraplength=440,
+                justify="left",
+                font=("Courier", 11)
+            )
+            label.pack(pady=(10, 20))
+
+            button = customtkinter.CTkButton(
+                frame,
+                text="OK",
+                command=popup.destroy
+            )
+            button.pack()
+
+        def show_working_popup():
+            popup = customtkinter.CTkToplevel(self)
+            popup.title("Please wait")
+            popup.geometry("320x150")
+            popup.resizable(False, False)
+            popup.attributes("-topmost", True)
+            popup.grab_set()
+
+            label = customtkinter.CTkLabel(
+                popup,
+                text="Simulation is running...\nPlease wait.",
+                font=("Arial", 14)
+            )
+            label.pack(expand=True, pady=30)
+
+            self.update_idletasks()
+            return popup
+
+        def show_timeout_popup():
+            popup = customtkinter.CTkToplevel(self)
+            popup.title("Simulation Warning")
+            popup.geometry("420x200")
+            popup.resizable(False, False)
+            popup.attributes("-topmost", True)
+
+            frame = customtkinter.CTkFrame(popup)
+            frame.pack(expand=True, fill="both", padx=20, pady=20)
+
+            label = customtkinter.CTkLabel(
+                frame,
+                text=(
+                    "⚠ Simulation is taking longer than expected.\n\n"
+                    "The application may be unresponsive.\n"
+                    "If this continues, consider restarting."
+                ),
+                wraplength=380,
+                justify="left",
+                font=("Arial", 13)
+            )
+            label.pack(pady=(10, 20))
+
+            button = customtkinter.CTkButton(
+                frame,
+                text="OK",
+                command=popup.destroy
+            )
+            button.pack()
+
+            return popup
 
         def override():
             if self.var2.get() == 1:

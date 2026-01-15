@@ -86,7 +86,8 @@ class app(customtkinter.CTk):
                 row_count = sum(1 for _ in f)
 
             TIMELINE = np.linspace(0, row_count, row_count)
-            # read body positions for every frame from seperate csv files, one for each body
+            # read body positions for every frame from seperate csv files, one for each
+            # body
             frames = np.empty((NUM_BODIES, TIMELINE.size, 3), dtype=float)
             for body in range(0, NUM_BODIES):
                 path = get_path(body)
@@ -638,7 +639,8 @@ class app(customtkinter.CTk):
                     ))
 
                 except Exception as e:
-                    self.after(0, lambda: show_error_popup(e))
+                    err = e
+                    self.after(0, lambda: show_error_popup(err))
 
                 finally:
                     finished = True

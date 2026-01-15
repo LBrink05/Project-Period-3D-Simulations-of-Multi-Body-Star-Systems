@@ -574,7 +574,6 @@ class app(customtkinter.CTk):
         def integrator(selection):
             self.dropdown2.set(selection)
 
-        #submits button logic, checks if variables are valid and enters them in a list
         def update():
             working_popup = show_working_popup()
             timeout_popup = None
@@ -589,10 +588,8 @@ class app(customtkinter.CTk):
                 nonlocal finished
                 try:
                     submission_time = datetime.datetime.now()
-
                     selection = self.dropdown1.get()
                     integrator_selection = importlib.import_module(self.dropdown2.get())
-
                     num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
 
                     precision = 0.01
@@ -613,14 +610,24 @@ class app(customtkinter.CTk):
                             eval(self.mass3.get()),
                             eval(self.velocity3.get())
                         ))
-
                         integrator_selection.Simulate(
                             customData, precision, int(self.durationVariable.get())
                         )
+                        # Store masses from custom input
+                        masses = [customData[1], customData[4], customData[7]]
                     else:
                         integrator_selection.Simulate(
                             stables[num], precision, int(self.durationVariable.get())
                         )
+                        # Store masses from stable preset
+                        masses = [stables[num][1], stables[num][4], stables[num][7]]
+
+                    # Store simulation data for Lyapunov analysis
+                    self.last_simulation_data = {
+                        'num_bodies': 3,
+                        'masses': masses,
+                        'precision': precision
+                    }
 
                     finished = True
 
@@ -643,7 +650,7 @@ class app(customtkinter.CTk):
                 if timeout_popup:
                     timeout_popup.destroy()
 
-            # Start timeout watchdog (2 minutes seconds)
+            # Start timeout watchdog (2 minutes)
             self.after(120000, timeout_trigger)
 
             # Start simulation thread

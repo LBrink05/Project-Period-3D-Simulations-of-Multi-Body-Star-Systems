@@ -650,74 +650,71 @@ class app(customtkinter.CTk):
                 if timeout_popup:
                     timeout_popup.destroy()
 
-            # Start timeout watchdog (2 minutes)
-            self.after(120000, timeout_trigger)
+            # Start timeout watchdog (3 minutes)
+            self.after(180000, timeout_trigger)
 
             # Start simulation thread
             threading.Thread(target=run_simulation, daemon=True).start()
 
         def show_error_popup(error):
-            popup = customtkinter.CTkToplevel(self)
-            popup.title("Simulation Error")
-            popup.geometry("500x250")
-            popup.resizable(False, False)
-            popup.attributes("-topmost", True)
-            popup.grab_set()
+            self.error_popup = customtkinter.CTkToplevel(self)
+            self.error_popup.title("Simulation Error")
+            self.error_popup.geometry("500x250")
+            self.error_popup.resizable(False, False)
+            self.error_popup.attributes("-topmost", True)
 
-            frame = customtkinter.CTkFrame(popup)
-            frame.pack(expand=True, fill="both", padx=20, pady=20)
+            self.error_frame = customtkinter.CTkFrame(self.error_popup)
+            self.error_frame.pack(expand=True, fill="both", padx=20, pady=20)
 
             error_text = f"{type(error).__name__}:\n\n{error}"
 
-            label = customtkinter.CTkLabel(
-                frame,
+            self.error_label = customtkinter.CTkLabel(
+                self.error_frame,
                 text=error_text,
                 text_color="red",
                 wraplength=440,
                 justify="left",
                 font=("Courier", 11)
             )
-            label.pack(pady=(10, 20))
+            self.error_label.pack(pady=(10, 20))
 
-            button = customtkinter.CTkButton(
-                frame,
+            self.okbutton = customtkinter.CTkButton(
+                self.error_frame,
                 text="OK",
-                command=popup.destroy
+                command=self.error_popup.destroy
             )
-            button.pack()
+            self.okbutton.pack()
 
         def show_working_popup():
-            popup = customtkinter.CTkToplevel(self)
-            popup.title("Please wait")
-            popup.geometry("320x150")
-            popup.resizable(False, False)
-            popup.attributes("-topmost", True)
-            popup.update_idletasks()  # Process pending display updates
-            popup.wait_visibility()   # Wait until window is actually visible
-            popup.grab_set()
+            self.working_popup = customtkinter.CTkToplevel(self)
+            self.working_popup.title("Please wait")
+            self.working_popup.geometry("320x150")
+            self.working_popup.resizable(False, False)
+            self.working_popup.attributes("-topmost", True)
 
-            label = customtkinter.CTkLabel(
-                popup,
+
+            self.label = customtkinter.CTkLabel(
+                self.working_popup,
                 text="Simulation is running...\nPlease wait.",
                 font=("Arial", 14)
             )
-            label.pack(expand=True, pady=30)
+            self.label.pack(expand=True, pady=30)
 
             self.update_idletasks()
-            return popup
+            return self.working_popup
 
         def show_timeout_popup():
-            popup = customtkinter.CTkToplevel(self)
-            popup.title("Simulation Warning")
-            popup.geometry("420x200")
-            popup.resizable(False, False)
-            popup.attributes("-topmost", True)
+            self.timeout_popup = customtkinter.CTkToplevel(self)
+            self.timeout_popup.title("Simulation Warning")
+            self.timeout_popup.geometry("420x200")
+            self.timeout_popup.resizable(False, False)
+            self.timeout_popup.attributes("-topmost", True)
 
-            frame = customtkinter.CTkFrame(popup)
-            frame.pack(expand=True, fill="both", padx=20, pady=20)
+            self.timeout_frame = customtkinter.CTkFrame(self.timeout_popup)
+            self.timeout_frame.pack(expand=True, fill="both", padx=20, pady=20)
 
-            label = customtkinter.CTkLabel(
-                frame,
+            self.timeout_label = customtkinter.CTkLabel(
+                self.timeout_frame,
                 text=(
                     "⚠ Simulation is taking longer than expected.\n\n"
                     "The application may be unresponsive.\n"
@@ -727,16 +724,16 @@ class app(customtkinter.CTk):
                 justify="left",
                 font=("Arial", 13)
             )
-            label.pack(pady=(10, 20))
+            self.timeout_label.pack(pady=(10, 20))
 
-            button = customtkinter.CTkButton(
-                frame,
+            self.timeout_button = customtkinter.CTkButton(
+                self.timeout_frame,
                 text="OK",
-                command=popup.destroy
+                command=self.timeout_popup.destroy
             )
-            button.pack()
+            self.timeout_button.pack()
 
-            return popup
+            return self.timeout_popup
 
         def override():
             if self.var2.get() == 1:

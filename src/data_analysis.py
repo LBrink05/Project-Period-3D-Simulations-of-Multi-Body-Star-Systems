@@ -218,17 +218,65 @@ def compute_jacobian(positions, velocities, masses, G=1.0, softening=0.001):
     return J
 
 
-def calculate_lyapunov_exponents(simulated_data, masses, timestep_sizes, renorm_interval=10, G=1.0, skip_frames=1, verbose=True):
+def calculate_lyapunov_exponents(simulated_data, masses, timestep_sizes, renorm_interval=10, G=1.0, skip_frames=1, verbose=True, use_frame_time=True):
     """
     Calculate Lyapunov exponents using timestep sizes from CSV.
+    
+    Parameters:
+    -----------
+    simulated_data : list
+        Phase space data for each body
+    masses : list
+        Mass of each body
+    timestep_sizes : np.array
+        Array of timestep sizes for each frame
+    renorm_interval : int
+        Number of processed frames between QR renormalization
+    G : float
+        Gravitational constant
+    skip_frames : int
+        Process every nth frame
+    verbose : bool
+        Print diagnostic information
+    use_frame_time : bool
+        If True, use frame-based time (frame_idx) for consistent time axis with other plots.
+        If False, use cumulative timestep time (actual physical time from integrator).
+        Frame-based time is recommended for adaptive timestep integrators to ensure
+        the time axis matches the error plots.
+    
+    Returns:
+    --------
+    lyapunov_spectrum_sorted : np.array
+        Sorted Lyapunov exponents (descending)
+    lyapunov_time : float
+        Characteristic Lyapunov time (1/lambda_max)
+    exponents_over_time : list
+        Evolution of exponents at each renormalization step
+    time_points : list
+        Time points corresponding to exponents_over_time
+    sorted_indices : np.array
+        Indices mapping sorted exponents to original phase space dimensions
     """
     
     num_bodies = len(simulated_data)
     num_frames = len(simulated_data[0])
     phase_dim = 6 * num_bodies
     
+    # Calculate total times for diagnostics
+    num_timesteps = min(len(timestep_sizes), num_frames)
+    total_timestep_time = np.sum(timestep_sizes[:num_timesteps]) if num_timesteps > 0 else 0
+    total_frame_time = num_frames  # Frame-based time (will be converted to seconds by /24 in GUI)
+    
     if verbose:
         print(f"Lyapunov calculation: {num_frames} frames, skip={skip_frames}")
+        print(f"  Timestep array length: {len(timestep_sizes)}")
+        print(f"  Total time from timesteps: {total_timestep_time:.6f} sim units")
+        print(f"  Total time from frames: {total_frame_time} frames ({total_frame_time/24:.2f} display seconds)")
+        print(f"  Time basis: {'frame-based' if use_frame_time else 'timestep-based'}")
+        
+        if len(timestep_sizes) > 0:
+            print(f"  Timestep range: [{timestep_sizes.min():.2e}, {timestep_sizes.max():.2e}]")
+            print(f"  Mean timestep: {timestep_sizes.mean():.2e}")
     
     # Initialize perturbation matrix as identity
     V = np.eye(phase_dim)
@@ -238,23 +286,39 @@ def calculate_lyapunov_exponents(simulated_data, masses, timestep_sizes, renorm_
     
     # Store exponents over time for visualization
     exponents_over_time = []
-    time_points = []  # In simulation time units
+    time_points = []  # Time points for plotting
     
     renorm_count = 0
-    cumulative_time = 0.0
+    cumulative_timestep_time = 0.0  # Actual physical time from timesteps
     processed = 0
     last_frame = 0
     
     for frame_idx in range(skip_frames, num_frames, skip_frames):
-        # Accumulate time for all frames since last processed frame
-        for i in range(last_frame + 1, frame_idx + 1):
-            cumulative_time += timestep_sizes[i]
+        # Accumulate actual timestep time for all frames since last processed frame
+        for i in range(last_frame + 1, min(frame_idx + 1, len(timestep_sizes))):
+            cumulative_timestep_time += timestep_sizes[i]
         last_frame = frame_idx
         
-        # Effective dt for Jacobian evolution (sum of skipped timesteps)
-        dt = cumulative_time - (time_points[-1] if time_points else 0.0)
-        if len(time_points) == 0:
-            dt = cumulative_time
+        # Determine dt for Jacobian evolution based on time basis choice
+        if use_frame_time:
+            # Use frame-based time: each frame represents 1 time unit
+            # This gives consistent time axis with error plots
+            current_time = frame_idx
+            if len(time_points) > 0:
+                dt = skip_frames  # Time between processed frames
+            else:
+                dt = frame_idx
+        else:
+            # Use actual timestep time (physical time from integrator)
+            current_time = cumulative_timestep_time
+            if len(time_points) > 0:
+                dt = current_time - time_points[-1]
+            else:
+                dt = current_time
+        
+        # Ensure dt is positive and reasonable
+        if dt <= 0:
+            dt = skip_frames if use_frame_time else 1e-6
         
         # Extract current state
         positions = np.array([simulated_data[b][frame_idx][:3] for b in range(num_bodies)])
@@ -263,6 +327,7 @@ def calculate_lyapunov_exponents(simulated_data, masses, timestep_sizes, renorm_
         # Compute Jacobian at current state
         J = compute_jacobian(positions, velocities, masses, G)
         
+        # Evolve perturbation vectors
         # Use approximation for small dt, full expm for larger dt
         if dt < 0.1:
             Jdt = J * dt
@@ -283,26 +348,33 @@ def calculate_lyapunov_exponents(simulated_data, masses, timestep_sizes, renorm_
             renorm_count += 1
             V = Q
             
-            if cumulative_time > 0:
-                current_exponents = S / cumulative_time
+            if current_time > 0:
+                current_exponents = S / current_time
                 exponents_over_time.append(current_exponents.copy())
-                time_points.append(cumulative_time)
+                time_points.append(current_time)
         
         if verbose and processed % 500 == 0:
             print(f"  Processed {processed}/{num_frames//skip_frames} frames ({100*frame_idx/num_frames:.1f}%)")
     
     if verbose:
-        print(f"  Done! Processed {processed} frames")
+        print(f"  Done! Processed {processed} frames, {renorm_count} renormalizations")
+        if use_frame_time:
+            print(f"  Final time: {time_points[-1] if time_points else 0} frames ({time_points[-1]/24 if time_points else 0:.2f} display seconds)")
+        else:
+            print(f"  Final time: {time_points[-1] if time_points else 0:.6f} sim units")
     
-    total_time = cumulative_time
+    # Calculate final Lyapunov spectrum
+    total_time = time_points[-1] if time_points else 1.0
     if total_time > 0:
         lyapunov_spectrum = S / total_time
     else:
         lyapunov_spectrum = np.zeros(phase_dim)
     
+    # Sort by magnitude (descending)
     sorted_indices = np.argsort(lyapunov_spectrum)[::-1]
     lyapunov_spectrum_sorted = lyapunov_spectrum[sorted_indices]
     
+    # Calculate Lyapunov time
     lambda_max = lyapunov_spectrum_sorted[0]
     if lambda_max > 0:
         lyapunov_time = 1.0 / lambda_max

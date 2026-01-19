@@ -335,11 +335,10 @@ class app(customtkinter.CTk):
             lyapunov_spectrum, lyapunov_time, exponents_over_time, time_points, sorted_indices = \
                 data_analysis.calculate_lyapunov_exponents(simulated_data, masses,
                                                            timestep_sizes=timestep_sizes,
-                                                           renorm_interval=10,
-                                                            use_frame_time=True)
+                                                           renorm_interval=10)
 
             # Convert time_points from sim units to display seconds
-            time_points_seconds = [t / 24.0 for t in time_points]
+            time_points_seconds = [t for t in time_points]
 
             # Convert Lyapunov exponents from 1/sim_unit to 1/second for display
             lyapunov_spectrum_display = lyapunov_spectrum * 24.0

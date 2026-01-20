@@ -183,16 +183,6 @@ class app(customtkinter.CTk):
                 timetext.set_text("t=" + str(plottime))
                 return trail_cols, points, timetext
 
-            self.anim = FuncAnimation(fig, update_data, frames=TIMELINE.size, interval=10, blit=False)
-
-            # destroyes the old animation if ran multiple times
-            for widget in self.animation_frame.winfo_children():
-                widget.destroy()
-
-            canvas = FigureCanvasTkAgg(fig, self.animation_frame)
-            canvas_widget = canvas.get_tk_widget()
-            canvas_widget.pack(fill="both", expand=True)
-
             axis_dim = 25
             ax.set_xlim(-axis_dim, axis_dim)
             ax.set_ylim(-axis_dim, axis_dim)
@@ -202,7 +192,19 @@ class app(customtkinter.CTk):
             ax.set_ylabel('Y axis')
             ax.set_zlabel('Z axis')
 
+            self.anim = FuncAnimation(fig, update_data, frames=TIMELINE.size, interval=10, blit=False)
+            self.anim.save((Path(str(CWDDIR)) / "Statistics" / 'animation.mp4'), writer='ffmpeg', fps=24)
+
+            # destroyes the old animation if ran multiple times
+            for widget in self.animation_frame.winfo_children():
+                widget.destroy()
+
+            canvas = FigureCanvasTkAgg(fig, self.animation_frame)
+            canvas_widget = canvas.get_tk_widget()
+            canvas_widget.pack(fill="both", expand=True)
+
             canvas.draw()
+
 
         def show_statistics(duration, precision, selection):
             # constants

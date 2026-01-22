@@ -11,7 +11,7 @@ CWDDIR = Path.cwd()
 
 
 # function to be called in UI
-def Simulate(data_list, precision, duration):
+def Simulate(data_list, precision,configuration, duration):
     mass = np.array([data_list[1], data_list[4], data_list[7]], dtype=np.float64)
     start_pos = np.array([[data_list[0][0], data_list[0][1], data_list[0][2]],
                           [data_list[3][0], data_list[3][1], data_list[3][2]],
@@ -33,7 +33,7 @@ def Simulate(data_list, precision, duration):
     timestep_size_list = np.full(num_output_frames, timestep * frameratio, dtype=np.float64)
 
     # Create output directory
-    out_dir = Path(str(CWDDIR)) / 'Simulated_Data'
+    out_dir = Path(str(CWDDIR)) / 'Simulated_Data' / configuration / 'IAS15'
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for body in range(0, num_bodies):

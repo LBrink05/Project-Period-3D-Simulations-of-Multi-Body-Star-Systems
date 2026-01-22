@@ -206,110 +206,113 @@ class app(customtkinter.CTk):
 
             canvas.draw()
 
-
         def show_statistics(duration, precision, selection):
-            # constants
-            NUM_BODIES = len([f for f in os.listdir(get_path(-1)) if f.startswith('body') and f.endswith('.csv')])
+            orbit_name = self.dropdown1.get().split(" - ")[1]
+            integrator_name = self.dropdown2.get()  # expects folder names like: leapfrog, rk45, Adaptive_leapfrog, forwardeuler, IAS15
 
-            # opening reference data and simulation data
-            path_reference = Path(str(CWDDIR)) / 'Reference_Data' / (
-                        (str(selection).split(' - ')[1]) + "_IAS15_dT_" + "0.0005")
-            path_simulation = get_path(-1)
+            base_dir = Path(str(CWDDIR)) / "Simulated_Data" / orbit_name
+            sim_dir = base_dir / integrator_name
 
-            # Check if reference data exists
-            if not path_reference.exists():
-                print("\n" + "#" * 60)
-                print("ERROR: Reference data not found!")
-                print("#" * 60)
-                print(f"\nMissing: {path_reference}")
-                print("\nPlease run the IAS15 reference simulation first before")
-                print("comparing results. Select IAS15 as the integrator and")
-                print("run a simulation with precision 0.0005 to generate reference data.")
-                return
-
-            # Read phase space data
-            reference_data = data_analysis.read_phase_space(NUM_BODIES, path_reference)
-            simulated_data = data_analysis.read_phase_space(NUM_BODIES, path_simulation)
-
-            # Extract masses from configuration
-            if selection.startswith('S'):
-                num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
+            if selection.startswith("S"):
+                num = int(selection.split("-")[0].strip().split(" ")[1]) - 1
                 masses = [stables[num][1], stables[num][4], stables[num][7]]
             else:
-                num = int(selection.split('-')[0].strip().split(' ')[1]) - 1
+                num = int(selection.split("-")[0].strip().split(" ")[1]) - 1
                 masses = [customs[num][1], customs[num][4], customs[num][7]]
 
-            # Create error function
+            ref_dir = Path(str(CWDDIR)) / "Reference_Data" / f"{orbit_name}_IAS15_dT_0.0005"
+            if not ref_dir.exists():
+                show_error(
+                    f"Reference data not found:\n{ref_dir}\n\nRun IAS15 (dt=0.0005) to generate reference data first.")
+                return
+
+            if not ((sim_dir / "body0.csv").exists() and (sim_dir / "body1.csv").exists() and (
+                    sim_dir / "body2.csv").exists()):
+                show_error(f"Simulated data not found for integrator '{integrator_name}':\n{sim_dir}")
+                return
+
+            reference_data = data_analysis.read_phase_space(3, ref_dir)
+            simulated_data = data_analysis.read_phase_space(3, sim_dir)
+
             error_func = data_analysis.error_function(reference_data, simulated_data, masses)
 
-            # count frames - use minimum length between reference and simulation
-            min_frames = min(len(simulated_data[0]), len(reference_data[0]))
+            n_frames = min(
+                len(reference_data[0]), len(reference_data[1]), len(reference_data[2]),
+                len(simulated_data[0]), len(simulated_data[1]), len(simulated_data[2])
+            )
 
-            # timeline: 1 time unit = 24 frames
-            frames = np.arange(min_frames)
-            TIMELINE = frames / 24
+            trajectory_errors = np.empty(n_frames, dtype=np.float64)
+            for frame in range(n_frames):
+                traj_err, _ = error_func(frame)
+                trajectory_errors[frame] = traj_err
 
-            # Calculate errors at each time point
-            trajectory_errors = []
-            hamiltonian_errors = []
+            timeline = np.arange(n_frames, dtype=np.float64) / 24.0
 
-            for frame in frames:
-                traj_err, ham_err = error_func(frame)
-                trajectory_errors.append(traj_err)
-                hamiltonian_errors.append(ham_err)
+            integrators_to_plot = ["forwardeuler", "leapfrog", "rk45", "Adaptive_leapfrog", "IAS15"]
+            ham_series = []
+            for integ in integrators_to_plot:
+                d = base_dir / integ
+                if not ((d / "body0.csv").exists() and (d / "body1.csv").exists() and (d / "body2.csv").exists()):
+                    continue
+                t_h, ham_err = hamiltonian_error_series(d, masses)
+                ham_series.append((integ, t_h, ham_err))
 
-            # Calculate max errors
-            traj_max = data_analysis.calculate_max_error(trajectory_errors, dt=1.0 / 24.0)
-            ham_max = data_analysis.calculate_max_error(hamiltonian_errors, dt=1.0 / 24.0)
+            if not ham_series:
+                show_error(f"No integrator outputs found under:\n{base_dir}")
+                return
 
-            # Create plot with two subplots
-            fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=False)
 
-            n = len(trajectory_errors)
-            # Trajectory Error Plot
-            ax1.plot(TIMELINE[1:n], trajectory_errors[1:n], linewidth=2, color='red', label='Trajectory Error')
-            ax1.axhline(y=traj_max, color='darkred', linestyle='--', linewidth=1.5,
-                        label=f'%_MAX = {traj_max:.2e}%')
-            ax1.set_xlabel('Time', fontsize=11)
-            ax1.set_ylabel('Trajectory Error E_% (%)', fontsize=11)
-            ax1.set_title('Phase Space Trajectory Error vs Time', fontsize=12, fontweight='bold')
-            ax1.grid(True, alpha=0.3, which='both')
-            ax1.legend(loc='upper right')
+            ax1.plot(timeline, trajectory_errors, linewidth=2, color="red",
+                     label=f"Trajectory Error ({integrator_name})")
+            ax1.set_title(f"Trajectory Error: {orbit_name} ({integrator_name})", fontsize=12, fontweight="bold")
+            ax1.set_xlabel("Time", fontsize=11)
+            ax1.set_ylabel("Trajectory Error (%)", fontsize=11)
+            ax1.grid(True, alpha=0.3)
+            ax1.legend(loc="upper right")
 
-            # Hamiltonian Error Plot
-            ax2.plot(TIMELINE, hamiltonian_errors, linewidth=2, color='blue', label='Hamiltonian Error')
-            ax2.axhline(y=ham_max, color='darkblue', linestyle='--', linewidth=1.5,
-                        label=f'H_MAX = {ham_max:.2e}%')
-            ax2.set_xlabel('Time', fontsize=11)
-            ax2.set_ylabel('Hamiltonian Error E_H% (%)', fontsize=11)
-            ax2.set_title('Energy Conservation Error vs Time', fontsize=12, fontweight='bold')
-            ax2.grid(True, alpha=0.3, which='both')
-            ax2.legend(loc='upper right')
+            for name, t_h, ham_err in ham_series:
+                ax2.plot(t_h, ham_err, linewidth=2, label=name)
+
+            ax2.set_title(f"Hamiltonian Error Comparison: {orbit_name}", fontsize=12, fontweight="bold")
+            ax2.set_xlabel("Time", fontsize=11)
+            ax2.set_ylabel("Hamiltonian Error (%)", fontsize=11)
+            ax2.grid(True, alpha=0.3)
+            ax2.legend(loc="upper right")
 
             plt.tight_layout()
-            dt_str = f"{precision:g}".replace(".", "p")  # 0.065 -> "0p065"
-            out = Path(str(CWDDIR)) / "Statistics" / f"{self.dropdown1.get()}_Simulated_data_dT_{dt_str}.png"
-            out.parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(out, dpi=300, bbox_inches="tight")
 
-            # Destroy old statistics plot if it exists
+            dt_str = f"{precision:g}".replace(".", "p")
+            out_path = Path(str(CWDDIR)) / "Statistics" / f"{orbit_name}_{integrator_name}_dT_{dt_str}_stats.png"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            plt.savefig(out_path, dpi=300, bbox_inches="tight")
+
             for widget in self.statistics_frame.winfo_children():
                 widget.destroy()
 
-            # Embed in GUI
-            canvas2 = FigureCanvasTkAgg(fig2, self.statistics_frame)
-            canvas_widget2 = canvas2.get_tk_widget()
-            canvas_widget2.pack(fill="both", expand=True)
-            canvas2.draw()
+            canvas = FigureCanvasTkAgg(fig, self.statistics_frame)
+            canvas.get_tk_widget().pack(fill="both", expand=True)
+            canvas.draw()
 
-            # Print summary statistics to console
-            print("\n" + "#" * 60)
-            print(f"ERROR ANALYSIS: ")
-            print("#" * 60 + "\n")
-            print(f"Total frames analyzed: {min_frames}")
-            print(f"Max Trajectory Error: {traj_max:.4e}%")
-            print(f"Max Hamiltonian Error: {ham_max:.4e}%\n")
+        def hamiltonian_error_series(sim_dir: Path, masses):
+            # sim_dir is .../Simulated_Data/<orbit>/<integrator>
+            simulated_data = data_analysis.read_phase_space(3, sim_dir)
 
+            # Use a common initial energy based on the first frame of THIS dataset
+            # (If you want a *shared* initial energy across integrators, see note below.)
+            initial_state = [body_data[0] for body_data in simulated_data]
+            initial_H = data_analysis.calculate_hamiltonian(initial_state, masses)
+
+            n_frames = min(len(simulated_data[0]), len(simulated_data[1]), len(simulated_data[2]))
+
+            ham_errors = np.empty(n_frames, dtype=float)
+            for frame in range(n_frames):
+                ham_errors[frame] = data_analysis.calculate_hamiltonian_error(
+                    simulated_data, masses, initial_H, frame
+                )
+
+            timeline = np.arange(n_frames) / 24.0  # consistent with your UI convention
+            return timeline, ham_errors
         def show_lyapunov_analysis():
 
             if self.last_simulation_data is None:

@@ -45,6 +45,7 @@ class app(customtkinter.CTk):
         self.anim = None
         self.current_fig = None
         self.last_simulation_data = None  # Store last simulation info
+        matplotlib.rcParams['animation.ffmpeg_path'] = Path(__file__).resolve().parent.parent / "tools" / "ffmpeg" / "bin" / "ffmpeg.exe"
 
         def show_error(exc: Exception):
             def show():
@@ -106,9 +107,9 @@ class app(customtkinter.CTk):
         def get_path(body):
             # Debugging
             if body == -1:
-                path = Path(str(CWDDIR)) / "Simulated_Data"  # directory
+                path = Path(str(CWDDIR)) / "Simulated_Data" / self.dropdown1.get().split(' - ')[1] / self.dropdown2.get()  # directory
             else:
-                path = Path(str(CWDDIR)) / "Simulated_Data" / f"body{body}.csv"  # individual csv
+                path = Path(str(CWDDIR)) / "Simulated_Data" / self.dropdown1.get().split(' - ')[1] / self.dropdown2.get() / f"body{body}.csv"  # individual csv
             return path
 
         def show_animation(duration):
@@ -594,6 +595,7 @@ class app(customtkinter.CTk):
             submission_time = datetime.datetime.now()
             try:
                 selection = self.dropdown1.get()
+                selectiontrimmed = selection.split(' - ')
                 integrator_selection = importlib.import_module(self.dropdown2.get())
 
                 print("Using Numerical Method: ", str(integrator_selection) + "\n")
@@ -624,14 +626,14 @@ class app(customtkinter.CTk):
                                            eval(self.position2.get()), eval(self.mass2.get()), eval(self.velocity2.get()),
                                            eval(self.position3.get()), eval(self.mass3.get()), eval(self.velocity3.get())))
                         masses = [customData[1], customData[4], customData[7]]
-                        integrator_selection.Simulate(customData, precision, int(self.durationVariable.get()))
+                        integrator_selection.Simulate(customData, precision, selectiontrimmed[1],int(self.durationVariable.get()))
                         show_animation(int(self.durationVariable.get()))
                 else:
                     if self.dropdown1.get().startswith('S'):
-                        integrator_selection.Simulate(stables[num], precision, int(self.durationVariable.get()))
+                        integrator_selection.Simulate(stables[num], precision, selectiontrimmed[1], int(self.durationVariable.get()))
                         show_animation(int(self.durationVariable.get()))
                     else:
-                        integrator_selection.Simulate(customs[num], precision, int(self.durationVariable.get()))
+                        integrator_selection.Simulate(customs[num], precision, selectiontrimmed[1], int(self.durationVariable.get()))
                         show_animation(int(self.durationVariable.get()))
 
                 rendering_time = datetime.datetime.now()

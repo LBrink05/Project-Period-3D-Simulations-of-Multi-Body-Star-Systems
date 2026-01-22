@@ -10,7 +10,7 @@ NUM_BODIES = 3
 # setting cwd directory
 CWDDIR = Path.cwd()
 
-def Simulate(data_list, precision, duration):
+def Simulate(data_list, precision, configuration, duration):
     mass = np.array([data_list[1], data_list[4], data_list[7]], dtype=np.float64)
     start_pos = np.array([
         [data_list[0][0], data_list[0][1], data_list[0][2]],
@@ -34,7 +34,7 @@ def Simulate(data_list, precision, duration):
     frames, timestep_size_list = position_sampled(timestep, total_steps, sample_every, out_steps, NUM_BODIES, start_pos, start_vel, mass)
 
     # save CSV files
-    out_dir = Path(str(CWDDIR)) / "Simulated_Data"
+    out_dir = Path(str(CWDDIR)) / "Simulated_Data" / configuration / "leapfrog"
     out_dir.mkdir(parents=True, exist_ok=True)
     for body in range(NUM_BODIES):
         path = out_dir / f"body{body}.csv"

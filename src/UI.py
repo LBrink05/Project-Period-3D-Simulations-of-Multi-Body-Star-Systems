@@ -183,7 +183,7 @@ class app(customtkinter.CTk):
                 timetext.set_text("t=" + str(plottime))
                 return trail_cols, points, timetext
 
-            axis_dim = 25
+            axis_dim = 10
             ax.set_xlim(-axis_dim, axis_dim)
             ax.set_ylim(-axis_dim, axis_dim)
             ax.set_zlim(-axis_dim, axis_dim)
@@ -193,7 +193,7 @@ class app(customtkinter.CTk):
             ax.set_zlabel('Z axis')
 
             self.anim = FuncAnimation(fig, update_data, frames=TIMELINE.size, interval=10, blit=False)
-            self.anim.save((Path(str(CWDDIR)) / "Statistics" / 'animation.mp4'), writer='ffmpeg', fps=24)
+            self.anim.save((Path(str(CWDDIR)) / "Statistics" / (str(self.dropdown1.get())+'animation.mp4')), writer='ffmpeg', fps=24)
 
             # destroyes the old animation if ran multiple times
             for widget in self.animation_frame.winfo_children():
@@ -407,13 +407,7 @@ class app(customtkinter.CTk):
                                 label=f'{dimension_labels_sorted[i]}: {lyapunov_spectrum_display[i]:.3e} /s',
                                 s=50, color=exponent_colors[idx], alpha=0.8)
 
-                    # Trend line (polynomial fit, degree 2)
-                    if len(time_array) > 2:
-                        z = np.polyfit(time_array, exponents_array[:, i], 2)
-                        p = np.poly1d(z)
-                        t_smooth = np.linspace(time_array.min(), time_array.max(), 100)
-                        ax2.plot(t_smooth, p(t_smooth), '--', color=exponent_colors[idx], alpha=0.6, linewidth=1.5)
-
+            
                 ax2.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
                 ax2.set_xlabel('Time (s)', fontsize=11)
                 ax2.set_ylabel('Lyapunov Exponent (1/s)', fontsize=11)
@@ -431,13 +425,6 @@ class app(customtkinter.CTk):
 
                 # Scatter points
                 ax3.scatter(time_array, sum_exponents, s=50, color='green', label='Σλ_i')
-
-                # Trend line (polynomial fit, degree 2)
-                if len(time_array) > 2:
-                    z = np.polyfit(time_array, sum_exponents, 2)
-                    p = np.poly1d(z)
-                    t_smooth = np.linspace(time_array.min(), time_array.max(), 100)
-                    ax3.plot(t_smooth, p(t_smooth), '--', color='darkgreen', alpha=0.8, linewidth=2, label='Trend')
 
                 ax3.axhline(y=0, color='black', linestyle='--', linewidth=0.8)
                 ax3.set_xlabel('Time (s)', fontsize=11)
@@ -467,32 +454,6 @@ class app(customtkinter.CTk):
             canvas_widget3 = canvas3.get_tk_widget()
             canvas_widget3.pack(fill="both", expand=True)
             canvas3.draw()
-
-            # Print detailed results to console
-            print("\n" + "#" * 60)
-            print("LYAPUNOV EXPONENT ANALYSIS")
-            print("#" * 60 + "\n")
-            print(f"Configuration: {self.dropdown1.get()}")
-            print(f"Timestep (dt): {precision}")
-            print(f"Calculation time: {calc_time:.2f} seconds")
-            print(f"\nMaximum Lyapunov Exponent: {lyapunov_spectrum[0]:.6e}")
-            print(f"Lyapunov Time (t_L = 1/λ_max): {lyapunov_time:.6e}")
-
-            if lyapunov_spectrum[0] > 1e-6:
-                print(f"\nSystem is CHAOTIC (λ_max > 0)")
-            elif lyapunov_spectrum[0] > -1e-6:
-                print(f"\nSystem is MARGINALLY STABLE (λ_max ≈ 0)")
-            else:
-                print(f"\nSystem is STABLE (λ_max < 0)")
-
-            print(f"\nNumber of positive exponents: {np.sum(lyapunov_spectrum > 0)}")
-            print(f"Number of negative exponents: {np.sum(lyapunov_spectrum < 0)}")
-            print(f"Number of near-zero exponents: {np.sum(np.abs(lyapunov_spectrum) < 1e-6)}")
-
-            if len(lyapunov_spectrum) > 0:
-                sum_lambda = np.sum(lyapunov_spectrum)
-                print(f"\nSum of all exponents (Liouville): {sum_lambda:.6e}")
-                print(f"  (Should be ≈ 0 for Hamiltonian systems)")
 
         # logic for custom button
         def custom():

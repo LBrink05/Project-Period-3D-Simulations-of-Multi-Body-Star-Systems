@@ -193,7 +193,7 @@ class app(customtkinter.CTk):
             ax.set_zlabel('Z axis')
 
             self.anim = FuncAnimation(fig, update_data, frames=TIMELINE.size, interval=10, blit=False)
-            self.anim.save((Path(str(CWDDIR)) / "Statistics" / (str(self.dropdown1.get())+'animation.mp4')), writer='ffmpeg', fps=24)
+            #self.anim.save((Path(str(CWDDIR)) / "Statistics" / (str(self.dropdown1.get())+'animation.mp4')), writer='ffmpeg', fps=24)
 
             # destroyes the old animation if ran multiple times
             for widget in self.animation_frame.winfo_children():

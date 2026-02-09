@@ -50,7 +50,7 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 | **Symplectic** | Leapfrog/Verlet | Preserves Hamiltonian structure and phase-space volume |
 | **Adaptive** | Adaptive RK/Verlet | Dynamic timestep adjustment based on error estimates |
 | **Fixed-Step** | Standard RK4 | Non-symplectic classical method |
-| **Forward Euler** |
+| **Forward Euler** | | Simplest method |
 
 ---
 

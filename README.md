@@ -98,7 +98,7 @@ python UI.py
 
 ---
 
-## 🎨 Visualization Options
+## Visualization Options
 
 Switch between rendering engines based on your needs:
 
@@ -108,6 +108,6 @@ Switch between rendering engines based on your needs:
 
 ---
 
-## 📚 Project Paper
+## Project Paper
 
 - Read our Document on https://www.overleaf.com/project/68fc924425dbd906ca8ddfc4

@@ -1,24 +1,24 @@
-# 🌟 3D Simulations of Multi-Body Star Systems
+# 3D Simulations of Multi-Body Star Systems
 
 A high-performance computational framework for simulating and analyzing gravitational dynamics in multi-body stellar systems using many advanced numerical methods and Lyapunov stability analysis.
 
 ---
 
-## 📋 Overview
+## Overview
 
 This project provides a comprehensive toolkit for investigating stellar dynamics through numerical simulation of N-body gravitational systems. By combining numerical integration methods with real-time visualization capabilities, researchers can explore chaotic orbital mechanics, close encounters, and long-term stability patterns in multi-star configurations.
 
 ### Key Features
 
-- 🚀 **Numerical Methods**: Compare symplectic, adaptive, arbitrary-precision, and series-based integrators
-- 📊 **Lyapunov Stability Analysis**: Full spectrum computation for orbital predictability assessment
-- 🎨 **Multi-Platform Visualization**: Switch between Matplotlib, Unity, and Manim renderers
-- 🖥️ **GUI Interface**: Python-based GUI built with CustomTkinter
-- 📈 **Comprehensive Error Metrics**: Phase-space trajectory accuracy and Hamiltonian conservation tracking
+- **Numerical Methods**: Compare symplectic, adaptive, arbitrary-precision, and series-based integrators
+- **Lyapunov Stability Analysis**: Full spectrum computation for orbital predictability assessment
+- **Multi-Platform Visualization**: Switch between Matplotlib, Unity, and Manim renderers
+- **GUI Interface**: Python-based GUI built with CustomTkinter
+- **Comprehensive Error Metrics**: Phase-space trajectory accuracy and Hamiltonian conservation tracking
 
 ---
 
-## 🔬 Scientific Background
+## Scientific Background
 
 ### Stellar Configurations
 
@@ -54,7 +54,7 @@ Three equal-mass bodies positioned equidistantly on a circle with tangential vel
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Core Engine
 - **Python**: High-performance numerical integration and physics calculations
